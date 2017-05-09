@@ -211,6 +211,12 @@ public class RatesCurvesCsvLoaderTest {
 
   //-------------------------------------------------------------------------
   public void test_load_all_curves() {
+    List<CurveGroup> emp = RatesCurvesCsvLoader.load(
+        LocalDate.of(2006, 5, 5),
+        ResourceLocator.of(GROUPS_1),
+        ResourceLocator.of(SETTINGS_1),
+        ImmutableList.of(ResourceLocator.of(CURVES_1), ResourceLocator.of(CURVES_2), ResourceLocator.of(CURVES_3)));
+
     ListMultimap<LocalDate, CurveGroup> allGroups = RatesCurvesCsvLoader.loadAllDates(
         ResourceLocator.of(GROUPS_1),
         ResourceLocator.of(SETTINGS_1),

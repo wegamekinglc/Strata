@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2017 - present by OpenGamma Inc. and the OpenGamma group of companies
+ *
+ * Please see distribution for license.
+ */
 package com.opengamma.strata.loader.csv;
 
 import static java.util.stream.Collectors.toList;
@@ -40,6 +45,49 @@ import com.opengamma.strata.market.curve.RepoGroup;
 import com.opengamma.strata.market.curve.interpolator.CurveExtrapolator;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
 
+/**
+ * Loads a set of legal entity rates curves into memory by reading from CSV resources.
+ * <p>
+ * There are three type of CSV files.
+ * <p>
+ * The first file is the legal entity curve group metadata file.
+ * This file has the following header row:<br />
+ * {@code Group Name, Curve Type, Reference, Currency, Curve Name}.
+ * <ul>
+ * <li>The 'Group Name' column is the name of the group of curves.
+ * <li>The 'Curve Type' column is the type of the curve, "repo" or "issuer".
+ * <li>The 'Reference' column is the reference group for which the curve is used, legal entity group or repo group.
+ * <li>The 'Currency' column is the reference currency for which the curve is used.
+ * <li>The 'Curve Name' column is the name of the curve.
+ * </ul>
+ * <p>
+ * The second file is the curve settings metadata file.
+ * This file has the following header row:<br />
+ * {@code Curve Name, Value Type, Day Count, Interpolator, Left Extrapolator, Right Extrapolator}.
+ * <ul>
+ * <li>The 'Curve Name' column is the name of the curve.
+ * <li>The 'Value Type' column is the type of data in the curve, "zero" for zero rates, or "df" for discount factors.
+ * <li>The 'Day Count' column is the name of the day count, such as "Act/365F".
+ * <li>The 'Interpolator' column defines the interpolator to use.
+ * <li>The 'Left Extrapolator' and 'Right Extrapolator' columns define the extrapolators to use.
+ * </ul>
+ * <p>
+ * The third file is the curve values file.
+ * This file has the following header row:<br />
+ * {@code Valuation Date, Curve Name, Date, Value, Label}.
+ * <ul>
+ * <li>The 'Valuation Date' column provides the valuation date, allowing data from different
+ *  days to be stored in the same file
+ * <li>The 'Curve Name' column is the name of the curve.
+ * <li>The 'Date' column is the date associated with the node.
+ * <li>The 'Value' column is value of the curve at the date.
+ * <li>The 'Label' column is the label used to refer to the node.
+ * </ul>
+ * <p>
+ * Each curve must be contained entirely within a single file, but each file may contain more than
+ * one curve. The curve points do not need to be ordered.
+ * The files must contain at least one repo curve and one issuer curve.
+ */
 public class LegalEntityRatesCurvesCsvLoader {
 
   // Column headers for legal entity curve group
@@ -48,37 +96,25 @@ public class LegalEntityRatesCurvesCsvLoader {
   private static final String GROUPS_REFERENCE = "Reference";
   private static final String GROUPS_CURRENCY = "Currency";
   private static final String GROUPS_CURVE_NAME = "Curve Name";
-  private static final ImmutableList<String> HEADERS = ImmutableList.of(
-      GROUPS_NAME, GROUPS_CURVE_TYPE, GROUPS_REFERENCE, GROUPS_CURVE_NAME);
 
-  /** Name used in the reference column of the CSV file for repo curves. */
+  // Names used in the curve type column in the legal entity curve group
   private static final String REPO = "repo";
-
-  /** Name used in the reference column of the CSV file for issuer curves. */
   private static final String ISSUER = "issuer";
 
-  // CSV column headers
+  // Column headers for curve setting 
   private static final String SETTINGS_CURVE_NAME = "Curve Name";
   private static final String SETTINGS_VALUE_TYPE = "Value Type";
   private static final String SETTINGS_DAY_COUNT = "Day Count";
   private static final String SETTINGS_INTERPOLATOR = "Interpolator";
   private static final String SETTINGS_LEFT_EXTRAPOLATOR = "Left Extrapolator";
   private static final String SETTINGS_RIGHT_EXTRAPOLATOR = "Right Extrapolator";
-  private static final ImmutableList<String> HEADERS_SETTINGS = ImmutableList.of(
-      SETTINGS_CURVE_NAME,
-      SETTINGS_VALUE_TYPE,
-      SETTINGS_DAY_COUNT,
-      SETTINGS_INTERPOLATOR,
-      SETTINGS_LEFT_EXTRAPOLATOR,
-      SETTINGS_RIGHT_EXTRAPOLATOR);
 
+  // Column headers for curve nodes
   private static final String CURVE_DATE = "Valuation Date";
   private static final String CURVE_NAME = "Curve Name";
   private static final String CURVE_POINT_DATE = "Date";
   private static final String CURVE_POINT_VALUE = "Value";
   private static final String CURVE_POINT_LABEL = "Label";
-  private static final ImmutableList<String> HEADERS_NODES = ImmutableList.of(
-      CURVE_DATE, CURVE_NAME, CURVE_POINT_DATE, CURVE_POINT_VALUE, CURVE_POINT_LABEL);
 
   /**
    * Names used in CSV file for value types.
@@ -172,9 +208,23 @@ public class LegalEntityRatesCurvesCsvLoader {
         CurveGroupName groupName = repoEntry.getKey();
         Map<Pair<RepoGroup, Currency>, Curve> repoCurves = MapStream.of(repoEntry.getValue())
             .mapValues(name -> curves.get(name))
+            .peek(e -> {
+              if (e.getValue() == null) {
+                throw new IllegalArgumentException(
+                    "Repo curve values for " + e.getKey().toString() + " in group " + groupName.getName() +
+                        " are missing on " + date.toString());
+              }
+            })
             .toMap();
         Map<Pair<LegalEntityGroup, Currency>, Curve> issuerCurves = MapStream.of(legalEntityGroups.get(groupName))
             .mapValues(name -> curves.get(name))
+            .peek(e -> {
+              if (e.getValue() == null) {
+                throw new IllegalArgumentException(
+                    "Issuer curve values for " + e.getKey().toString() + " in group " + groupName.getName() +
+                        " are missing on " + date.toString());
+              }
+            })
             .toMap();
         builder.put(date, LegalEntityCurveGroup.of(groupName, repoCurves, issuerCurves));
       }
