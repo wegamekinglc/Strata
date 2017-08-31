@@ -42,7 +42,7 @@ final class NameFilter<T>
   }
 
   @Override
-  public boolean matches(NamedMarketDataId<T> marketDataId, MarketDataBox<T> marketData, ReferenceData refData) {
+  public boolean matches(NamedMarketDataId<T> marketDataId, MarketDataBox<? extends T> marketData, ReferenceData refData) {
     return marketDataId.getMarketDataName().equals(name);
   }
 
