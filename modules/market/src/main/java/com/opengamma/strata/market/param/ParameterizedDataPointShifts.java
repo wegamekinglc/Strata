@@ -44,6 +44,7 @@ import com.opengamma.strata.market.ShiftType;
  * <p>
  * This class contains a set of shifts, each one associated with a different parameter in the data.
  * Each shift has an associated key that is matched against the parameterized data.
+ * In order for this to work the parameterized data must have matching and unique parameter metadata.
  * <p>
  * When matching the shift to the parameterized data, either the identifier or label parameter may be used.
  * A shift is not applied if there is no point on the parameterized data with a matching identifier.
