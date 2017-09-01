@@ -53,12 +53,13 @@ public interface MarketDataFilter<T, I extends MarketDataId<? extends T>> {
   /**
    * Obtains a filter that matches the specified name.
    *
-   * @param <T>  the type of market data handled by the filter
+   * @param <T>  the generic type of market data handled by the filter
+   * @param <I>  the type of market data handled by the filter
    * @param name  the name that is matched by this filter
    * @return a filter matching the specified name
    */
-  public static <T> MarketDataFilter<T, NamedMarketDataId<T>> ofName(MarketDataName<T> name) {
-    return new NameFilter<T>(name);
+  public static <T, I extends T> MarketDataFilter<T, NamedMarketDataId<I>> ofName(MarketDataName<I> name) {
+    return new NameFilter<T, I>(name);
   }
 
   //-------------------------------------------------------------------------
