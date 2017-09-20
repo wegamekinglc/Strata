@@ -17,6 +17,7 @@ import org.joda.beans.Bean;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.ImmutableConstructor;
+import org.joda.beans.ImmutablePreBuild;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.Property;
@@ -142,6 +143,13 @@ public final class BlackFxOptionSurfaceVolatilities
       Surface surface) {
 
     return new BlackFxOptionSurfaceVolatilities(name, currencyPair, valuationDateTime, surface);
+  }
+
+  @ImmutablePreBuild
+  private static void preBuild(Builder builder) {
+    if (builder.name == null && builder.surface != null) {
+      builder.name = FxOptionVolatilitiesName.of(builder.surface.getName().getName());
+    }
   }
 
   @ImmutableConstructor
@@ -629,6 +637,7 @@ public final class BlackFxOptionSurfaceVolatilities
 
     @Override
     public BlackFxOptionSurfaceVolatilities build() {
+      preBuild(this);
       return new BlackFxOptionSurfaceVolatilities(
           name,
           currencyPair,

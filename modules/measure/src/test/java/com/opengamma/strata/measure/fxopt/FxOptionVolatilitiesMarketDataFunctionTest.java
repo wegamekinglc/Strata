@@ -101,8 +101,13 @@ import com.opengamma.strata.product.fxopt.FxVanillaOptionTrade;
 import com.opengamma.strata.product.swap.type.FixedOvernightSwapConventions;
 import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
 
+/**
+ * Test {@code FxOptionVolatilitiesMarketDataFunction}.
+ */
 @Test
 public class FxOptionVolatilitiesMarketDataFunctionTest {
+
+  // TODO test with surface
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
   private static final LocalDate VALUATION_DATE = LocalDate.of(2017, 2, 15);
@@ -267,7 +272,6 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
   private static final TradeInfo TRADE_INFO = TradeInfo.builder().tradeDate(VALUATION_DATE).build();
   private static final LocalDate CASH_SETTLE_DATE = VALUATION_DATE.plusDays(1);
   private static final AdjustablePayment PREMIUM = AdjustablePayment.of(GBP, NOTIONAL * 0.1, CASH_SETTLE_DATE);
-//  private static final AdjustablePayment PREMIUM = AdjustablePayment.of(GBP, 0d, CASH_SETTLE_DATE);
   private static final FxVanillaOptionTrade OPTION_TRADE = FxVanillaOptionTrade.builder()
       .premium(PREMIUM)
       .product(OPTION_PRODUCT)
@@ -428,7 +432,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
     CurrencyScenarioArray computed = (CurrencyScenarioArray) results.get(0, 0).getValue();
     CurrencyAmount expected = PRICER.presentValue(OPTION_TRADE.resolve(REF_DATA), EXP_RATES, EXP_VOLS)
         .convertedTo(USD, EXP_RATES);
-    // built data does not depend on market quotes, consistent with rates
+    // dependency graph is absent, thus scenarios are not created
     assertTrue(computed.getScenarioCount() == 1);
     assertEquals(computed.get(0), expected);
   }
