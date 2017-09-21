@@ -22,8 +22,6 @@ import com.opengamma.strata.basics.currency.FxRateProvider;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.data.MarketDataFxRateProvider;
 import com.opengamma.strata.data.ObservableSource;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default FX rate lookup.

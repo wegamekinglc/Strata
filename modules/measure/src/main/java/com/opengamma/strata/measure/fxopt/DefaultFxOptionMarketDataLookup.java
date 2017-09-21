@@ -38,7 +38,7 @@ import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesId;
  * This provides FX options volatilities by currency pair.
  * <p>
  * The lookup implements {@link CalculationParameter} and is used by passing it
- * as an argument to {@link CalculationRules}. It provides the link between the 
+ * as an argument to {@link CalculationRules}. It provides the link between the
  * data that the function needs and the data that is available in {@link ScenarioMarketData}.
  */
 @BeanDefinition(style = "light")

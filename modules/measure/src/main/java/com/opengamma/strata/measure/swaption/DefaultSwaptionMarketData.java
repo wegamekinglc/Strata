@@ -21,8 +21,6 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.pricer.swaption.SwaptionVolatilities;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for swaptions.

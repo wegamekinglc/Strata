@@ -32,7 +32,6 @@ import com.opengamma.strata.data.MarketDataNotFoundException;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.pricer.swaption.SwaptionVolatilities;
 import com.opengamma.strata.pricer.swaption.SwaptionVolatilitiesId;
-import org.joda.beans.Property;
 
 /**
  * The swaption lookup, used to select volatilities for pricing.

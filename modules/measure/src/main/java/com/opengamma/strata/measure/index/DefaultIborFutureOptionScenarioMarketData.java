@@ -19,8 +19,6 @@ import org.joda.beans.impl.light.LightMetaBean;
 
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for Ibor future options, used for calculation across multiple scenarios.

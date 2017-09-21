@@ -27,8 +27,6 @@ import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.market.observable.QuoteId;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * Configuration defining how to create {@link FxRate} instances from observable market data.

@@ -22,8 +22,6 @@ import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.runner.CalculationParameter;
 import com.opengamma.strata.measure.swaption.SwaptionMarketDataLookup;
 import com.opengamma.strata.product.cms.CmsTrade;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The additional parameters necessary for pricing CMS using SABR extrapolation replication.

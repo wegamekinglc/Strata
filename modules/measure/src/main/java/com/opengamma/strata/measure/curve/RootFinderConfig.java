@@ -23,8 +23,6 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.collect.ArgChecker;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * Configuration for the root finder used when calibrating curves.

@@ -20,8 +20,6 @@ import org.joda.beans.impl.light.LightMetaBean;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for rates products.

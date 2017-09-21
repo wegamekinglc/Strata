@@ -54,8 +54,6 @@ import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.OvernightIndexRates;
 import com.opengamma.strata.pricer.rate.PriceIndexValues;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * A rates provider based on a rates lookup.

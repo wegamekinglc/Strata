@@ -31,8 +31,6 @@ import com.opengamma.strata.data.ObservableSource;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.pricer.credit.CreditRatesProvider;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The credit rates lookup, used to select curves for pricing.

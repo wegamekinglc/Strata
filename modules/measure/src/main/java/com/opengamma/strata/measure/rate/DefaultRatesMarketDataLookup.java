@@ -38,7 +38,6 @@ import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.market.observable.IndexQuoteId;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import org.joda.beans.Property;
 
 /**
  * The rates lookup, used to select curves for pricing.

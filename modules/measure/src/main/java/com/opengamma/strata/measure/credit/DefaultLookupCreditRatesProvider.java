@@ -43,8 +43,6 @@ import com.opengamma.strata.pricer.credit.CreditRatesProvider;
 import com.opengamma.strata.pricer.credit.ImmutableCreditRatesProvider;
 import com.opengamma.strata.pricer.credit.LegalEntitySurvivalProbabilities;
 import com.opengamma.strata.pricer.credit.RecoveryRates;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * A credit rates provider based on a credit rates lookup.

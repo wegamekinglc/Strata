@@ -19,8 +19,6 @@ import org.joda.beans.impl.light.LightMetaBean;
 import com.opengamma.strata.basics.currency.FxRateProvider;
 import com.opengamma.strata.data.FxMatrixId;
 import com.opengamma.strata.data.MarketData;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The matrix FX rate lookup.

@@ -33,7 +33,6 @@ import com.opengamma.strata.data.MarketDataNotFoundException;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.pricer.index.IborFutureOptionVolatilities;
 import com.opengamma.strata.pricer.index.IborFutureOptionVolatilitiesId;
-import org.joda.beans.Property;
 
 /**
  * The Ibor future option lookup, used to select volatilities for pricing.

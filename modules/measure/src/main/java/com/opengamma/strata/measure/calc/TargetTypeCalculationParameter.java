@@ -24,8 +24,6 @@ import com.opengamma.strata.calc.Measure;
 import com.opengamma.strata.calc.runner.CalculationParameter;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * A calculation parameter that selects the parameter based on the type of the target.
