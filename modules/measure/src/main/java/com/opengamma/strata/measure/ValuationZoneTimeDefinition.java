@@ -74,8 +74,12 @@ public final class ValuationZoneTimeDefinition
    * @return the zoned date time
    */
   public MarketDataBox<ZonedDateTime> toZonedDateTime(MarketDataBox<LocalDate> dates) {
-    ArgChecker.isTrue(dates.getScenarioCount() == localTimes.getScenarioCount(),
-        "the number of scenarios must be the same");
+    if (localTimes.getScenarioCount() == 1) {
+      ArgChecker.isTrue(dates.isSingleValue(), "the number of scenarios must be coherent");
+    } else {
+      ArgChecker.isTrue(dates.isSingleValue() || localTimes.getScenarioCount() == dates.getScenarioCount(),
+          "the number of scenarios must be coherent");
+    }
     if (dates.isScenarioValue()) {
       int nScenarios = dates.getScenarioCount();
       List<ZonedDateTime> zonedDateTimes = IntStream.range(0, nScenarios)

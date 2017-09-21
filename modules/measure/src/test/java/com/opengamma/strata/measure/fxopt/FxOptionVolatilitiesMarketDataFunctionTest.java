@@ -359,7 +359,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
     for (Entry<QuoteId, Double> entry : MARKET_QUOTES.entrySet()) {
       DoubleArray shifts = DoubleArray.of(nScenarios, n -> Math.pow(0.9, n));
       ScenarioPerturbation<Double> perturb = GenericDoubleShifts.of(ShiftType.SCALED, shifts);
-      perturbationMapping.add(PerturbationMapping.of(Double.class, MarketDataFilter.ofId(entry.getKey()), perturb));
+      perturbationMapping.add(PerturbationMapping.of(MarketDataFilter.ofId(entry.getKey()), perturb));
     }
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(perturbationMapping);
     ScenarioMarketData marketDataCalibrated = StandardComponents.marketDataFactory().createMultiScenario(
@@ -395,7 +395,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
       }
     }
     ScenarioPerturbation<ParameterizedData> perturb = builder.build();
-    perturbationMapping.add(PerturbationMapping.of(ParameterizedData.class, MarketDataFilter.ofId(VOL_ID), perturb));
+    perturbationMapping.add(PerturbationMapping.of(MarketDataFilter.ofId(VOL_ID), perturb));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(perturbationMapping);
     ScenarioMarketData marketDataCalibrated = StandardComponents.marketDataFactory().createMultiScenario(
         REQUIREMENTS, SCENARIO_CONFIG, MARKET_DATA, REF_DATA, scenarioDefinition);
@@ -416,7 +416,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
     for (Entry<QuoteId, Double> entry : MARKET_QUOTES.entrySet()) {
       DoubleArray shifts = DoubleArray.of(nScenarios, n -> Math.pow(0.9, n));
       ScenarioPerturbation<Double> perturb = GenericDoubleShifts.of(ShiftType.SCALED, shifts);
-      perturbationMapping.add(PerturbationMapping.of(Double.class, MarketDataFilter.ofId(entry.getKey()), perturb));
+      perturbationMapping.add(PerturbationMapping.of(MarketDataFilter.ofId(entry.getKey()), perturb));
     }
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(perturbationMapping);
     ImmutableMarketData dataWithSurface = ImmutableMarketData.builder(VALUATION_DATE)
