@@ -10,13 +10,14 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import org.joda.beans.Bean;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -31,9 +32,6 @@ import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.option.Strike;
-import org.joda.beans.MetaBean;
-import org.joda.beans.gen.BeanDefinition;
-import org.joda.beans.gen.PropertyDefinition;
 
 /**
  * A node in the configuration specifying how to build FX option volatilities.

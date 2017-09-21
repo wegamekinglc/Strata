@@ -31,7 +31,6 @@ import com.opengamma.strata.data.MarketDataNotFoundException;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilities;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesId;
-import org.joda.beans.Property;
 
 /**
  * The FX options lookup, used to select volatilities for pricing.
@@ -39,7 +38,7 @@ import org.joda.beans.Property;
  * This provides FX options volatilities by currency pair.
  * <p>
  * The lookup implements {@link CalculationParameter} and is used by passing it
- * as an argument to {@link CalculationRules}. It provides the link between the
+ * as an argument to {@link CalculationRules}. It provides the link between the 
  * data that the function needs and the data that is available in {@link ScenarioMarketData}.
  */
 @BeanDefinition(style = "light")

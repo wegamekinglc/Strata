@@ -21,8 +21,6 @@ import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilities;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for FX options.
