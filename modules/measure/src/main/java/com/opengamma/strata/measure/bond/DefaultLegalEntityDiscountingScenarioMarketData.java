@@ -20,8 +20,6 @@ import org.joda.beans.impl.light.LightMetaBean;
 
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for products based on repo and issuer curves, used for calculation across multiple scenarios.

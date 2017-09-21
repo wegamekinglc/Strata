@@ -20,8 +20,6 @@ import org.joda.beans.impl.light.LightMetaBean;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.pricer.bond.LegalEntityDiscountingProvider;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for products based on repo and issuer curves.

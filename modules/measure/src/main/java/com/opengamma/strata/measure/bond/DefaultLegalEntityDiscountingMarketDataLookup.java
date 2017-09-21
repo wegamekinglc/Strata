@@ -40,7 +40,6 @@ import com.opengamma.strata.market.curve.LegalEntityGroup;
 import com.opengamma.strata.market.curve.RepoGroup;
 import com.opengamma.strata.pricer.bond.LegalEntityDiscountingProvider;
 import com.opengamma.strata.product.SecurityId;
-import org.joda.beans.Property;
 
 /**
  * The legal entity discounting lookup, used to select curves for pricing.

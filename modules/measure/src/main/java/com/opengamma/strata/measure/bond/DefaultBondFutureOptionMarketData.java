@@ -21,8 +21,6 @@ import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.pricer.bond.BondFutureVolatilities;
 import com.opengamma.strata.product.SecurityId;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * The default market data for bond future options.

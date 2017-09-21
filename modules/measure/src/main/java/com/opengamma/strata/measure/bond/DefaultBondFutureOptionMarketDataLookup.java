@@ -32,7 +32,6 @@ import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.pricer.bond.BondFutureVolatilities;
 import com.opengamma.strata.pricer.bond.BondFutureVolatilitiesId;
 import com.opengamma.strata.product.SecurityId;
-import org.joda.beans.Property;
 
 /**
  * The bond future options lookup, used to select volatilities for pricing.

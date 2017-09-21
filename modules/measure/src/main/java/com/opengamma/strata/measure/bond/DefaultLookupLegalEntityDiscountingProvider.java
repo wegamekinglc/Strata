@@ -45,8 +45,6 @@ import com.opengamma.strata.pricer.bond.LegalEntityDiscountingProvider;
 import com.opengamma.strata.pricer.bond.RepoCurveDiscountFactors;
 import com.opengamma.strata.pricer.bond.RepoCurveZeroRateSensitivity;
 import com.opengamma.strata.product.SecurityId;
-import java.util.Set;
-import org.joda.beans.Property;
 
 /**
  * A legal entity discounting provider based on a discounting lookup.
