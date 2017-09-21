@@ -55,6 +55,8 @@ import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.result.FailureItem;
 import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.ValueWithFailures;
+import com.opengamma.strata.product.SecurityId;
+import com.opengamma.strata.product.SecurityTrade;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.deposit.TermDeposit;
@@ -98,6 +100,12 @@ public class TradeCsvLoaderTest {
 
   private static final ResourceLocator FILE =
       ResourceLocator.of("classpath:com/opengamma/strata/loader/csv/trades.csv");
+
+  //-------------------------------------------------------------------------
+  public void test_isKnownFormat() {
+    TradeCsvLoader test = TradeCsvLoader.standard();
+    assertEquals(test.isKnownFormat(FILE.getCharSource()), true);
+  }
 
   //-------------------------------------------------------------------------
   public void test_load_failures() {
@@ -403,7 +411,7 @@ public class TradeCsvLoaderTest {
 
   public void test_load_swap_all() {
     ImmutableMap<String, String> csvMap = ImmutableMap.<String, String>builder()
-        .put("Type", "Swap")
+        .put("Strata Trade Type", "Swap")
         .put("Id Scheme", "OG")
         .put("Id", "1234")
         .put("Trade Date", "20170101")
@@ -741,6 +749,99 @@ public class TradeCsvLoaderTest {
     assertBeanEquals(expected, result.getValue().get(0));
   }
 
+  public void test_load_swap_defaultFixedLegDayCount() {
+    ImmutableMap<String, String> csvMap = ImmutableMap.<String, String>builder()
+        .put("Strata Trade Type", "Swap")
+        .put("Id Scheme", "OG")
+        .put("Id", "1234")
+        .put("Trade Date", "20170101")
+        .put("Trade Time", "12:30")
+        .put("Trade Zone", "Europe/Paris")
+
+        .put("Leg 1 Direction", "Pay")
+        .put("Leg 1 Start Date", "2017-05-02")
+        .put("Leg 1 End Date", "2022-05-02")
+        .put("Leg 1 Date Convention", "Following")
+        .put("Leg 1 Date Calendar", "GBLO")
+        .put("Leg 1 Frequency", "12M")
+        .put("Leg 1 Currency", "GBP")
+        .put("Leg 1 Notional", "1000000")
+        .put("Leg 1 Fixed Rate", "1.1")
+
+        .put("Leg 2 Direction", "Pay")
+        .put("Leg 2 Start Date", "2017-05-02")
+        .put("Leg 2 End Date", "2022-05-02")
+        .put("Leg 2 Date Convention", "Following")
+        .put("Leg 2 Date Calendar", "GBLO")
+        .put("Leg 2 Frequency", "6M")
+        .put("Leg 2 Currency", "GBP")
+        .put("Leg 2 Notional", "1000000")
+        .put("Leg 2 Index", "CHF-LIBOR-6M")
+        .build();
+    String csv = Joiner.on(',').join(csvMap.keySet()) + "\n" + Joiner.on(',').join(csvMap.values());
+
+    TradeCsvLoader test = TradeCsvLoader.standard();
+    ValueWithFailures<List<SwapTrade>> result = test.parse(ImmutableList.of(CharSource.wrap(csv)), SwapTrade.class);
+    assertEquals(result.getFailures().size(), 0, result.getFailures().toString());
+    assertEquals(result.getValue().size(), 1);
+
+    Swap expectedSwap = Swap.builder()
+        .legs(
+            RateCalculationSwapLeg.builder()  // Fixed fixed stub
+                .payReceive(PAY)
+                .accrualSchedule(PeriodicSchedule.builder()
+                    .startDate(date(2017, 5, 2))
+                    .endDate(date(2022, 5, 2))
+                    .frequency(Frequency.P12M)
+                    .businessDayAdjustment(BusinessDayAdjustment.of(FOLLOWING, GBLO))
+                    .stubConvention(StubConvention.SHORT_INITIAL)
+                    .build())
+                .paymentSchedule(PaymentSchedule.builder()
+                    .paymentFrequency(Frequency.P12M)
+                    .paymentDateOffset(DaysAdjustment.NONE)
+                    .paymentRelativeTo(PaymentRelativeTo.PERIOD_END)
+                    .build())
+                .notionalSchedule(NotionalSchedule.builder()
+                    .currency(GBP)
+                    .amount(ValueSchedule.of(1_000_000))
+                    .build())
+                .calculation(FixedRateCalculation.builder()
+                    .dayCount(DayCounts.THIRTY_U_360)  // defaulted from CHF-LIBOR-6M
+                    .rate(ValueSchedule.of(0.011))
+                    .build())
+                .build(),
+            RateCalculationSwapLeg.builder()
+                .payReceive(PAY)
+                .accrualSchedule(PeriodicSchedule.builder()
+                    .startDate(date(2017, 5, 2))
+                    .endDate(date(2022, 5, 2))
+                    .frequency(Frequency.P6M)
+                    .businessDayAdjustment(BusinessDayAdjustment.of(FOLLOWING, GBLO))
+                    .stubConvention(StubConvention.SHORT_INITIAL)
+                    .build())
+                .paymentSchedule(PaymentSchedule.builder()
+                    .paymentFrequency(Frequency.P6M)
+                    .paymentDateOffset(DaysAdjustment.NONE)
+                    .build())
+                .notionalSchedule(NotionalSchedule.of(GBP, 1_000_000))
+                .calculation(IborRateCalculation.builder()
+                    .dayCount(DayCounts.ACT_360)
+                    .index(IborIndices.CHF_LIBOR_6M)
+                    .build())
+                .build())
+        .build();
+    SwapTrade expected = SwapTrade.builder()
+        .info(TradeInfo.builder()
+            .id(StandardId.of("OG", "1234"))
+            .tradeDate(date(2017, 1, 1))
+            .tradeTime(LocalTime.of(12, 30))
+            .zone(ZoneId.of("Europe/Paris"))
+            .build())
+        .product(expectedSwap)
+        .build();
+    assertBeanEquals(expected, result.getValue().get(0));
+  }
+
   //-------------------------------------------------------------------------
   public void test_load_termDeposit() {
     TradeCsvLoader test = TradeCsvLoader.standard();
@@ -792,6 +893,40 @@ public class TradeCsvLoaderTest {
   }
 
   //-------------------------------------------------------------------------
+  public void test_load_security() {
+    TradeCsvLoader test = TradeCsvLoader.standard();
+    ValueWithFailures<List<Trade>> trades = test.load(FILE);
+
+    List<SecurityTrade> filtered = trades.getValue().stream()
+        .filter(SecurityTrade.class::isInstance)
+        .map(SecurityTrade.class::cast)
+        .collect(toImmutableList());
+    assertEquals(filtered.size(), 2);
+
+    SecurityTrade expected1 = SecurityTrade.builder()
+        .info(TradeInfo.builder()
+            .id(StandardId.of("OG", "123431"))
+            .tradeDate(date(2017, 6, 1))
+            .build())
+        .securityId(SecurityId.of("OG-Security", "AAPL"))
+        .quantity(12)
+        .price(14.5)
+        .build();
+    assertBeanEquals(expected1, filtered.get(0));
+
+    SecurityTrade expected2 = SecurityTrade.builder()
+        .info(TradeInfo.builder()
+            .id(StandardId.of("OG", "123432"))
+            .tradeDate(date(2017, 6, 1))
+            .build())
+        .securityId(SecurityId.of("BBG", "MSFT"))
+        .quantity(20)
+        .price(17.8)
+        .build();
+    assertBeanEquals(expected2, filtered.get(1));
+  }
+
+  //-------------------------------------------------------------------------
   public void test_load_invalidNoHeader() {
     TradeCsvLoader test = TradeCsvLoader.standard();
     ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("")));
@@ -809,12 +944,12 @@ public class TradeCsvLoaderTest {
     assertEquals(trades.getFailures().size(), 1);
     FailureItem failure = trades.getFailures().get(0);
     assertEquals(failure.getReason(), FailureReason.PARSING);
-    assertEquals(failure.getMessage().contains("CSV file does not contain 'Type' header"), true);
+    assertEquals(failure.getMessage().contains("CSV file does not contain 'Strata Trade Type' header"), true);
   }
 
   public void test_load_invalidUnknownType() {
     TradeCsvLoader test = TradeCsvLoader.standard();
-    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Type\nFoo")));
+    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Strata Trade Type\nFoo")));
 
     assertEquals(trades.getFailures().size(), 1);
     FailureItem failure = trades.getFailures().get(0);
@@ -824,7 +959,7 @@ public class TradeCsvLoaderTest {
 
   public void test_load_invalidFra() {
     TradeCsvLoader test = TradeCsvLoader.standard();
-    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Type,Buy Sell\nFra,Buy")));
+    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Strata Trade Type,Buy Sell\nFra,Buy")));
 
     assertEquals(trades.getFailures().size(), 1);
     FailureItem failure = trades.getFailures().get(0);
@@ -834,7 +969,7 @@ public class TradeCsvLoaderTest {
 
   public void test_load_invalidSwap() {
     TradeCsvLoader test = TradeCsvLoader.standard();
-    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Type,Buy Sell\nSwap,Buy")));
+    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Strata Trade Type,Buy Sell\nSwap,Buy")));
 
     assertEquals(trades.getFailures().size(), 1);
     FailureItem failure = trades.getFailures().get(0);
@@ -846,7 +981,8 @@ public class TradeCsvLoaderTest {
 
   public void test_load_invalidTermDeposit() {
     TradeCsvLoader test = TradeCsvLoader.standard();
-    ValueWithFailures<List<Trade>> trades = test.parse(ImmutableList.of(CharSource.wrap("Type,Buy Sell\nTermDeposit,Buy")));
+    ValueWithFailures<List<Trade>> trades =
+        test.parse(ImmutableList.of(CharSource.wrap("Strata Trade Type,Buy Sell\nTermDeposit,Buy")));
 
     assertEquals(trades.getFailures().size(), 1);
     FailureItem failure = trades.getFailures().get(0);
@@ -857,6 +993,7 @@ public class TradeCsvLoaderTest {
   //-------------------------------------------------------------------------
   public void coverage() {
     coverPrivateConstructor(FraTradeCsvLoader.class);
+    coverPrivateConstructor(SecurityCsvLoader.class);
     coverPrivateConstructor(SwapTradeCsvLoader.class);
     coverPrivateConstructor(TermDepositTradeCsvLoader.class);
     coverPrivateConstructor(FullSwapTradeCsvLoader.class);

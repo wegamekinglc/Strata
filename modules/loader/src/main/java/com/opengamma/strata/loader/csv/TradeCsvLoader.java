@@ -28,6 +28,7 @@ import com.opengamma.strata.collect.result.FailureItem;
 import com.opengamma.strata.collect.result.FailureReason;
 import com.opengamma.strata.collect.result.ValueWithFailures;
 import com.opengamma.strata.loader.LoaderUtils;
+import com.opengamma.strata.product.SecurityTrade;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.TradeInfoBuilder;
@@ -49,7 +50,7 @@ import com.opengamma.strata.product.swap.type.SingleCurrencySwapConvention;
  * <p>
  * The following standard columns are supported:<br />
  * <ul>
- * <li>The 'Type' column is required, and must be the instrument type,
+ * <li>The 'Strata Trade Type' column is required, and must be the instrument type,
  *   such as 'Fra' or 'Swap'
  * <li>The 'Id Scheme' column is optional, and is the name of the scheme that the trade
  *   identifier is unique within, such as 'OG-Trade'
@@ -139,6 +140,21 @@ import com.opengamma.strata.product.swap.type.SingleCurrencySwapConvention;
  * <li>'Convention', 'Start Date', 'End Date'
  * <li>'Start Date', 'End Date', 'Currency', 'Day Count'
  * </ul>
+ * 
+ * <h4>Security</h4>
+ * <p>
+ * The following columns are supported for 'Security' trades:
+ * <ul>
+ * <li>'Security Id Scheme' - optional, defaults to 'OG-Security'
+ * <li>'Security Id' - mandatory
+ * <li>'Quantity' - see below
+ * <li>'Long Quantity' - see below
+ * <li>'Short Quantity' - see below
+ * <li>'Price' - optional
+ * </ul>
+ * <p>
+ * The quantity will normally be set from the 'Quantity' column.
+ * If that column is not found, the 'Long Quantity' and 'Short Quantity' columns will be used instead.
  */
 public final class TradeCsvLoader {
 
@@ -163,16 +179,16 @@ public final class TradeCsvLoader {
   static final String DAY_COUNT_FIELD = "Day Count";
 
   // CSV column headers
-  private static final String TYPE_FIELD = "Type";
+  private static final String TYPE_FIELD = "Strata Trade Type";
   private static final String ID_SCHEME_FIELD = "Id Scheme";
   private static final String ID_FIELD = "Id";
   private static final String TRADE_TIME_FIELD = "Trade Time";
   private static final String TRADE_ZONE_FIELD = "Trade Zone";
 
   /**
-   * The reference data.
+   * The resolver, providing additional information.
    */
-  private final ReferenceData refData;
+  private final CsvInfoResolver resolver;
 
   //-------------------------------------------------------------------------
   /**
@@ -181,7 +197,7 @@ public final class TradeCsvLoader {
    * @return the loader
    */
   public static TradeCsvLoader standard() {
-    return new TradeCsvLoader(ReferenceData.standard());
+    return new TradeCsvLoader(CsvInfoResolver.standard());
   }
 
   /**
@@ -191,17 +207,22 @@ public final class TradeCsvLoader {
    * @return the loader
    */
   public static TradeCsvLoader of(ReferenceData refData) {
-    return new TradeCsvLoader(refData);
+    return new TradeCsvLoader(CsvInfoResolver.of(refData));
   }
 
-  //-------------------------------------------------------------------------
   /**
-   * Restricted constructor.
+   * Obtains an instance that uses the specified resolver for additional information.
    * 
-   * @param refData  the reference data
+   * @param resolver  the resolver used to parse additional information
+   * @return the loader
    */
-  private TradeCsvLoader(ReferenceData refData) {
-    this.refData = ArgChecker.notNull(refData, "refData");
+  public static TradeCsvLoader of(CsvInfoResolver resolver) {
+    return new TradeCsvLoader(resolver);
+  }
+
+  // restricted constructor
+  private TradeCsvLoader(CsvInfoResolver resolver) {
+    this.resolver = ArgChecker.notNull(resolver, "resolver");
   }
 
   //-------------------------------------------------------------------------
@@ -232,6 +253,24 @@ public final class TradeCsvLoader {
         .map(r -> UnicodeBom.toCharSource(r.getByteSource()))
         .collect(toList());
     return parse(charSources);
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Checks whether the source is a CSV format trade file.
+   * <p>
+   * This parses the headers as CSV and checks that mandatory headers are present.
+   * This is determined entirely from the 'Strata Trade Type' column.
+   * 
+   * @param charSource  the CSV character source to check
+   * @return true if the source is a CSV file with known headers, false otherwise
+   */
+  public boolean isKnownFormat(CharSource charSource) {
+    try (CsvIterator csv = CsvIterator.of(charSource, true)) {
+      return csv.containsHeader(TYPE_FIELD);
+    } catch (RuntimeException ex) {
+      return false;
+    }
   }
 
   //-------------------------------------------------------------------------
@@ -280,7 +319,7 @@ public final class TradeCsvLoader {
     try (CsvIterator csv = CsvIterator.of(charSource, true)) {
       if (!csv.headers().contains(TYPE_FIELD)) {
         return ValueWithFailures.of(ImmutableList.of(),
-            FailureItem.of(FailureReason.PARSING, "CSV file does not contain 'Type' header: {}", charSource));
+            FailureItem.of(FailureReason.PARSING, "CSV file does not contain '{}' header: {}", TYPE_FIELD, charSource));
       }
       return parseFile(csv, tradeType);
 
@@ -302,18 +341,23 @@ public final class TradeCsvLoader {
         switch (type.toUpperCase(Locale.ENGLISH)) {
           case "FRA":
             if (tradeType == FraTrade.class || tradeType == Trade.class) {
-              trades.add(tradeType.cast(FraTradeCsvLoader.parse(row, info, refData)));
+              trades.add(tradeType.cast(FraTradeCsvLoader.parse(row, info, resolver)));
+            }
+            break;
+          case "SECURITY":
+            if (tradeType == SecurityTrade.class || tradeType == Trade.class) {
+              trades.add(tradeType.cast(SecurityCsvLoader.parseTrade(row, info, resolver)));
             }
             break;
           case "SWAP":
             if (tradeType == SwapTrade.class || tradeType == Trade.class) {
-              trades.add(tradeType.cast(SwapTradeCsvLoader.parse(row, info, refData)));
+              trades.add(tradeType.cast(SwapTradeCsvLoader.parse(row, info, resolver)));
             }
             break;
           case "TERMDEPOSIT":
           case "TERM DEPOSIT":
             if (tradeType == TermDepositTrade.class || tradeType == Trade.class) {
-              trades.add(tradeType.cast(TermDepositTradeCsvLoader.parse(row, info, refData)));
+              trades.add(tradeType.cast(TermDepositTradeCsvLoader.parse(row, info, resolver)));
             }
             break;
           default:
@@ -337,6 +381,7 @@ public final class TradeCsvLoader {
     row.findValue(TRADE_DATE_FIELD).ifPresent(dateStr -> infoBuilder.tradeDate(LoaderUtils.parseDate(dateStr)));
     row.findValue(TRADE_TIME_FIELD).ifPresent(timeStr -> infoBuilder.tradeTime(LoaderUtils.parseTime(timeStr)));
     row.findValue(TRADE_ZONE_FIELD).ifPresent(zoneStr -> infoBuilder.zone(ZoneId.of(zoneStr)));
+    resolver.parseTradeInfo(row, infoBuilder);
     return infoBuilder.build();
   }
 
