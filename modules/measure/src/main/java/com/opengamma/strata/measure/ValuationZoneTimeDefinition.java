@@ -30,28 +30,53 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
 
+import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.scenario.MarketDataBox;
 import com.opengamma.strata.data.scenario.ScenarioArray;
 
 /**
- * 
+ * Definition of valuation zone and time. 
+ * <p>
+ * This contains {@code ZoneId} and a set of {@code LocalTime} to create {@code ZonedDateTime} from {@code LocalDate}.
  */
 @BeanDefinition(builderScope = "private")
 public final class ValuationZoneTimeDefinition
     implements ImmutableBean, Serializable {
 
-
+  /**
+   * The local time.
+   * <p>
+   * The local time in {@code zoneId}. 
+   * The number of the scenarios must be coherent to that of {@code ScenarioMarketData}.
+   */
   @PropertyDefinition(validate = "notNull")
   private final ScenarioArray<LocalTime> localTimes;
-
+  /**
+   * The zone ID.
+   */
   @PropertyDefinition(validate = "notNull", get = "private")
   private final ZoneId zoneId;
 
+  /**
+   * Obtains an instance.
+   * 
+   * @param localTimes  the local time
+   * @param zoneId  the zone ID
+   * @return the instance
+   */
   public static ValuationZoneTimeDefinition of(ScenarioArray<LocalTime> localTimes, ZoneId zoneId) {
     return new ValuationZoneTimeDefinition(localTimes, zoneId);
   }
 
+  /**
+   * Creates zoned date time. 
+   * 
+   * @param dates  the local date
+   * @return the zoned date time
+   */
   public MarketDataBox<ZonedDateTime> toZonedDateTime(MarketDataBox<LocalDate> dates) {
+    ArgChecker.isTrue(dates.getScenarioCount() == localTimes.getScenarioCount(),
+        "the number of scenarios must be the same");
     if (dates.isScenarioValue()) {
       int nScenarios = dates.getScenarioCount();
       List<ZonedDateTime> zonedDateTimes = IntStream.range(0, nScenarios)
@@ -59,7 +84,6 @@ public final class ValuationZoneTimeDefinition
           .collect(Collectors.toList());
       return MarketDataBox.ofScenarioValues(zonedDateTimes);
     }
-    // TODO check localTimes size
     ZonedDateTime zonedDateTime = dates.getSingleValue().atTime(localTimes.get(0)).atZone(zoneId);
     return MarketDataBox.ofSingleValue(zonedDateTime);
   }
@@ -109,7 +133,10 @@ public final class ValuationZoneTimeDefinition
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the localTimes.
+   * Gets the local time.
+   * <p>
+   * The local time in {@code zoneId}.
+   * The number of the scenarios must be coherent to that of {@code ScenarioMarketData}.
    * @return the value of the property, not null
    */
   public ScenarioArray<LocalTime> getLocalTimes() {
@@ -118,7 +145,7 @@ public final class ValuationZoneTimeDefinition
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the zoneId.
+   * Gets the zone ID.
    * @return the value of the property, not null
    */
   private ZoneId getZoneId() {

@@ -69,7 +69,6 @@ public class FxOptionVolatilitiesMarketDataFunction
     ImmutableList<MarketDataBox<Double>> inputs = volatilitiesDefinition.volatilitiesInputs().stream()
         .map(q -> marketData.getValue(q))
         .collect(toImmutableList());
-
     ImmutableList<FxOptionVolatilities> vols = IntStream.range(0, nScenarios)
         .mapToObj(i -> volatilitiesDefinition.volatilities(
             valuationDateTimes.getValue(i),
@@ -77,7 +76,7 @@ public class FxOptionVolatilitiesMarketDataFunction
             refData))
         .collect(toImmutableList());
 
-    return nScenarios == 1 ? MarketDataBox.ofSingleValue(vols.get(0)) : MarketDataBox.ofScenarioValues(vols);
+    return nScenarios > 1 ? MarketDataBox.ofScenarioValues(vols) : MarketDataBox.ofSingleValue(vols.get(0));
   }
 
   @Override

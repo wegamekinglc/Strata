@@ -6,6 +6,7 @@
 package com.opengamma.strata.measure.fxopt;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
+import static com.opengamma.strata.market.curve.interpolator.CurveExtrapolators.FLAT;
 
 import java.io.Serializable;
 import java.time.ZonedDateTime;
@@ -18,6 +19,7 @@ import java.util.stream.IntStream;
 import org.joda.beans.Bean;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
+import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.Property;
@@ -31,10 +33,12 @@ import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.date.DayCount;
+import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.interpolator.CurveExtrapolator;
-import com.opengamma.strata.market.curve.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
+import com.opengamma.strata.market.option.SimpleStrike;
 import com.opengamma.strata.market.param.ParameterMetadata;
 import com.opengamma.strata.market.surface.InterpolatedNodalSurface;
 import com.opengamma.strata.market.surface.SurfaceMetadata;
@@ -46,6 +50,12 @@ import com.opengamma.strata.pricer.fxopt.BlackFxOptionSurfaceVolatilities;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesName;
 import com.opengamma.strata.pricer.fxopt.FxVolatilitySurfaceYearFractionParameterMetadata;
 
+/**
+ * The specification of how to build FX option volatilities. 
+ * <p>
+ * This is the specification for a single volatility object, {@link BlackFxOptionSurfaceVolatilities}. 
+ * The underlying surface in the volatilities is {@code InterpolatedNodalSurface}.
+ */
 @BeanDefinition
 public final class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecification
     implements FxOptionVolatilitiesSpecification, ImmutableBean, Serializable {
@@ -92,8 +102,18 @@ public final class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecificatio
   @PropertyDefinition(validate = "notNull")
   private final CurveExtrapolator strikeExtrapolatorRight;
 
-  // TODO more flexibility for of 
-
+  //-------------------------------------------------------------------------
+  /**
+   * Creates an instance with flat extrapolator. 
+   * 
+   * @param name  the name
+   * @param currencyPair  currency pair
+   * @param dayCount  the day count
+   * @param nodes  the nodes
+   * @param timeInterpolator  the time interpolator
+   * @param strikeInterpolator  the strike interpolator
+   * @return the instance
+   */
   public static BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecification of(
       FxOptionVolatilitiesName name,
       CurrencyPair currencyPair,
@@ -102,20 +122,61 @@ public final class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecificatio
       CurveInterpolator timeInterpolator,
       CurveInterpolator strikeInterpolator) {
 
+    return of(name, currencyPair, dayCount, nodes, timeInterpolator, FLAT, FLAT, strikeInterpolator, FLAT, FLAT);
+  }
+
+  /**
+   * Creates an instance.
+   * 
+   * @param name  the name
+   * @param currencyPair  currency pair
+   * @param dayCount  the day count
+   * @param nodes  the nodes
+   * @param timeInterpolator  the time interpolator
+   * @param timeExtrapolatorLeft  the time left extrapolator
+   * @param timeExtrapolatorRight  the time right extrapolator
+   * @param strikeInterpolator  the strike interpolator
+   * @param strikeExtrapolatorLeft  the strike left extrapolator
+   * @param strikeExtrapolatorRight  the strike right extrapolator
+   * @return the instance
+   */
+  public static BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecification of(
+      FxOptionVolatilitiesName name,
+      CurrencyPair currencyPair,
+      DayCount dayCount,
+      List<FxOptionVolatilitiesNode> nodes,
+      CurveInterpolator timeInterpolator,
+      CurveExtrapolator timeExtrapolatorLeft,
+      CurveExtrapolator timeExtrapolatorRight,
+      CurveInterpolator strikeInterpolator,
+      CurveExtrapolator strikeExtrapolatorLeft,
+      CurveExtrapolator strikeExtrapolatorRight) {
+
     return new BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecification(
         name,
         currencyPair,
         dayCount,
         nodes,
         timeInterpolator,
-        CurveExtrapolators.FLAT,
-        CurveExtrapolators.FLAT,
+        timeExtrapolatorLeft,
+        timeExtrapolatorRight,
         strikeInterpolator,
-        CurveExtrapolators.FLAT, CurveExtrapolators.FLAT);
+        strikeExtrapolatorLeft,
+        strikeExtrapolatorRight);
   }
 
-  // TODO quoteValueType <- BlackVolatility
+  @ImmutableValidator
+  private void validate() {
+    int nParams = nodes.size();
+    for (int i = 0; i < nParams; ++i) {
+      ArgChecker.isTrue(nodes.get(i).getCurrencyPair().equals(currencyPair), "currency pair must be the same");
+      ArgChecker.isTrue(nodes.get(i).getStrike() instanceof SimpleStrike, "Strike must be SimpleStrike");
+      ArgChecker.isTrue(nodes.get(i).getQuoteValueType().equals(ValueType.BLACK_VOLATILITY),
+          "quote value type must be BLACK_VOLATILITY");
+    }
+  }
 
+  //-------------------------------------------------------------------------
   @Override
   public BlackFxOptionSurfaceVolatilities volatilities(
       ZonedDateTime valuationDateTime,
@@ -123,9 +184,9 @@ public final class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecificatio
       ReferenceData refData) {
 
     DoubleArray strikes = DoubleArray.ofUnsafe(
-        nodes.stream().mapToDouble(n -> n.getStrike().getValue()).toArray()); // TODO must be simple strike
+        nodes.stream().mapToDouble(n -> n.getStrike().getValue()).toArray());
     DoubleArray expiries = DoubleArray.ofUnsafe(
-        nodes.stream().mapToDouble(n -> n.timeToExpiry(valuationDateTime.toLocalDate(), dayCount, refData)).toArray());
+        nodes.stream().mapToDouble(n -> n.timeToExpiry(valuationDateTime, dayCount, refData)).toArray());
     SurfaceMetadata metadata = Surfaces.blackVolatilityByExpiryStrike(SurfaceName.of(name.getName()), dayCount)
         .withParameterMetadata(parameterMetadata(expiries));
     
@@ -202,6 +263,7 @@ public final class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecificatio
     this.strikeInterpolator = strikeInterpolator;
     this.strikeExtrapolatorLeft = strikeExtrapolatorLeft;
     this.strikeExtrapolatorRight = strikeExtrapolatorRight;
+    validate();
   }
 
   @Override

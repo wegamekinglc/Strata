@@ -6,22 +6,23 @@
 package com.opengamma.strata.measure.fxopt;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableList;
-import static com.opengamma.strata.collect.Guavate.toImmutableMap;
 import static com.opengamma.strata.market.curve.interpolator.CurveExtrapolators.FLAT;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
+import org.joda.beans.ImmutableConstructor;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.Property;
@@ -32,36 +33,56 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyPair;
+import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DayCount;
+import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.collect.MapStream;
-import com.opengamma.strata.collect.Messages;
+import com.opengamma.strata.collect.Guavate;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
+import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.interpolator.CurveExtrapolator;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
+import com.opengamma.strata.market.option.DeltaStrike;
 import com.opengamma.strata.market.option.Strike;
 import com.opengamma.strata.pricer.fxopt.BlackFxOptionSmileVolatilities;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesName;
 import com.opengamma.strata.pricer.fxopt.InterpolatedStrikeSmileDeltaTermStructure;
 
+/**
+ * The specification of how to build FX option volatilities. 
+ * <p>
+ * This is the specification for a single volatility object, {@link BlackFxOptionSmileVolatilities}.
+ */
 @BeanDefinition
 public final class BlackFxOptionSmileVolatilitiesSpecification
     implements FxOptionVolatilitiesSpecification, ImmutableBean, Serializable {
 
+  /**
+   * The name of the volatilities.
+   */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final FxOptionVolatilitiesName name;
-
+  /**
+   * The currency pair that the volatilities are for.
+   */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final CurrencyPair currencyPair;
-
+  /**
+   * The day count convention used for the expiry.
+   */
   @PropertyDefinition(validate = "notNull")
   private final DayCount dayCount;
-
+  /**
+   * The nodes in the FX option volatilities.
+   * <p>
+   * The nodes are used to find the quotes and build the volatilities.
+   */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final ImmutableList<FxOptionVolatilitiesNode> nodes;
   /**
@@ -95,8 +116,27 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
   @PropertyDefinition(validate = "notNull")
   private final CurveExtrapolator strikeExtrapolatorRight;
   
-  // TODO more flexibility for of 
+  /**
+   * Entries for the volatilities, keyed by tenor.
+   */
+  private final transient ImmutableListMultimap<Tenor, FxOptionVolatilitiesNode> nodesByTenor;  // not a property
+  /**
+   * The range of the delta.
+   */
+  private final transient ImmutableList<Double> deltas;  // not a property
 
+  //-------------------------------------------------------------------------
+  /**
+   * Creates an instance with flat extrapolator. 
+   * 
+   * @param name  the name
+   * @param currencyPair  currency pair
+   * @param dayCount  the day count
+   * @param nodes  the nodes
+   * @param timeInterpolator  the time interpolator
+   * @param strikeInterpolator  the strike interpolator
+   * @return the instance
+   */
   public static BlackFxOptionSmileVolatilitiesSpecification of(
       FxOptionVolatilitiesName name,
       CurrencyPair currencyPair,
@@ -105,43 +145,77 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
       CurveInterpolator timeInterpolator,
       CurveInterpolator strikeInterpolator) {
 
-    return new BlackFxOptionSmileVolatilitiesSpecification(
-        name, currencyPair, dayCount, nodes, timeInterpolator, FLAT, FLAT, strikeInterpolator, FLAT, FLAT);
+    return of(name, currencyPair, dayCount, nodes, timeInterpolator, FLAT, FLAT, strikeInterpolator, FLAT, FLAT);
   }
 
-  // TODO direction of currency pair btw defn and nodes
-  // TODO instance of Strike
+  /**
+   * Creates an instance.
+   * 
+   * @param name  the name
+   * @param currencyPair  currency pair
+   * @param dayCount  the day count
+   * @param nodes  the nodes
+   * @param timeInterpolator  the time interpolator
+   * @param timeExtrapolatorLeft  the time left extrapolator
+   * @param timeExtrapolatorRight  the time right extrapolator
+   * @param strikeInterpolator  the strike interpolator
+   * @param strikeExtrapolatorLeft  the strike left extrapolator
+   * @param strikeExtrapolatorRight  the strike right extrapolator
+   * @return the instance
+   */
+  public static BlackFxOptionSmileVolatilitiesSpecification of(
+      FxOptionVolatilitiesName name,
+      CurrencyPair currencyPair,
+      DayCount dayCount,
+      List<FxOptionVolatilitiesNode> nodes,
+      CurveInterpolator timeInterpolator,
+      CurveExtrapolator timeExtrapolatorLeft,
+      CurveExtrapolator timeExtrapolatorRight,
+      CurveInterpolator strikeInterpolator,
+      CurveExtrapolator strikeExtrapolatorLeft,
+      CurveExtrapolator strikeExtrapolatorRight) {
 
+    return new BlackFxOptionSmileVolatilitiesSpecification(
+        name,
+        currencyPair,
+        dayCount,
+        nodes,
+        timeInterpolator,
+        timeExtrapolatorLeft,
+        timeExtrapolatorRight,
+        strikeInterpolator,
+        strikeExtrapolatorLeft,
+        strikeExtrapolatorRight);
+  }
+
+  //-------------------------------------------------------------------------
   @Override
   public BlackFxOptionSmileVolatilities volatilities(
       ZonedDateTime valuationDateTime,
       DoubleArray parameters,
       ReferenceData refData) {
 
-    Map<FxOptionVolatilitiesNode, Double> totalMap = IntStream.range(0, nodes.size())
-        .boxed()
-        .collect(toImmutableMap(nodes::get, parameters::get));
-    List<Tenor> tenors = nodes.stream()
-        .map(FxOptionVolatilitiesNode::getTenor)
-        .distinct()
-        .sorted()
-        .collect(toImmutableList());
+    ImmutableListMultimap.Builder<Tenor, Pair<FxOptionVolatilitiesNode, Double>> builder = ImmutableListMultimap.builder();
+    for (Tenor tenor : nodesByTenor.keys()) {
+      ImmutableList<Pair<FxOptionVolatilitiesNode, Double>> nodesAndQuotes = nodesByTenor.get(tenor).stream()
+          .map(n -> Pair.of(n, parameters.get(nodes.indexOf(n))))
+          .collect(toImmutableList());
+      builder.putAll(tenor, nodesAndQuotes);
+    }
+    ImmutableListMultimap<Tenor, Pair<FxOptionVolatilitiesNode, Double>> nodesAndQuotesByTenor = builder.build();
+
+    List<Tenor> tenors = new ArrayList<>(nodesByTenor.keys());
+    Collections.sort(tenors);
     int nTenors = tenors.size();
-    List<Double> deltas = nodes.stream()
-        .map(FxOptionVolatilitiesNode::getStrike)
-        .distinct()
-        .map(Strike::getValue)
-        .sorted()
-        .collect(toImmutableList());
-    int nDeltas = deltas.size() - 1;
-    ArgChecker.isTrue(deltas.get(nDeltas) == 0.5, "0 < deltas <= 0.5, and ATM nodes must be involved");
+    int nDeltas = deltas.size();
 
     double[] expiries = new double[nTenors];
     double[] atm = new double[nTenors];
     double[][] rr = new double[nTenors][nDeltas];
     double[][] str = new double[nTenors][nDeltas];
     for (int i = 0; i < nTenors; ++i) {
-      parametersForPeriod(valuationDateTime.toLocalDate(), totalMap, deltas, tenors, i, expiries, atm, rr, str, refData);
+      parametersForPeriod(
+          valuationDateTime, nodesAndQuotesByTenor.get(tenors.get(i)), i, expiries, atm, rr, str, refData);
     }
     InterpolatedStrikeSmileDeltaTermStructure smiles = InterpolatedStrikeSmileDeltaTermStructure.of(
         DoubleArray.copyOf(expiries), DoubleArray.copyOf(deltas.subList(0, nDeltas)),
@@ -153,10 +227,8 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
   }
 
   private void parametersForPeriod(
-      LocalDate valuationDate,
-      Map<FxOptionVolatilitiesNode, Double> totalMap,
-      List<Double> deltas,
-      List<Tenor> tenors,
+      ZonedDateTime valuationDateTime,
+      List<Pair<FxOptionVolatilitiesNode, Double>> nodesAndQuotes,
       int index,
       double[] expiries,
       double[] atm,
@@ -164,31 +236,23 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
       double[][] str,
       ReferenceData refData) {
 
-    Tenor tenor = tenors.get(index);
     int nDeltas = deltas.size();
-    int size = 2 * nDeltas - 1;
-    Map<FxOptionVolatilitiesNode, Double> reducedMap = MapStream.of(totalMap)
-        .filterKeys(n -> n.getTenor().equals(tenor))
-        .toMap();
-    ArgChecker.isTrue(reducedMap.size() == size,
-        Messages.format("the number of volatility nodes must be {}, but found {}, for {}", size, reducedMap.size(), tenor));
-
-    for (Entry<FxOptionVolatilitiesNode, Double> entry : reducedMap.entrySet()) {
-      FxOptionVolatilitiesNode node = entry.getKey();
+    for (Pair<FxOptionVolatilitiesNode, Double> entry : nodesAndQuotes) {
+      FxOptionVolatilitiesNode node = entry.getFirst();
       ValueType quoteValyeType = node.getQuoteValueType();
       if (quoteValyeType.equals(ValueType.BLACK_VOLATILITY)) {
-        atm[index] = entry.getValue();
-        expiries[index] = node.timeToExpiry(valuationDate, dayCount, refData);
+        atm[index] = entry.getSecond();
+        expiries[index] = node.timeToExpiry(valuationDateTime, dayCount, refData);
       } else if (quoteValyeType.equals(ValueType.RISK_REVERSAL)) {
-        for (int i = 0; i < nDeltas - 1; ++i) {
+        for (int i = 0; i < nDeltas; ++i) {
           if (node.getStrike().getValue() == deltas.get(i)) {
-            rr[index][i] = entry.getValue();
+            rr[index][i] = entry.getSecond();
           }
         }
       } else if (quoteValyeType.equals(ValueType.STRANGLE)) {
-        for (int i = 0; i < nDeltas - 1; ++i) {
+        for (int i = 0; i < nDeltas; ++i) {
           if (node.getStrike().getValue() == deltas.get(i)) {
-            str[index][i] = entry.getValue();
+            str[index][i] = entry.getSecond();
           }
         }
       } else {
@@ -197,33 +261,8 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
     }
   }
 
-  //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
-  /**
-   * The meta-bean for {@code BlackFxOptionSmileVolatilitiesSpecification}.
-   * @return the meta-bean, not null
-   */
-  public static BlackFxOptionSmileVolatilitiesSpecification.Meta meta() {
-    return BlackFxOptionSmileVolatilitiesSpecification.Meta.INSTANCE;
-  }
-
-  static {
-    JodaBeanUtils.registerMetaBean(BlackFxOptionSmileVolatilitiesSpecification.Meta.INSTANCE);
-  }
-
-  /**
-   * The serialization version id.
-   */
-  private static final long serialVersionUID = 1L;
-
-  /**
-   * Returns a builder used to create an instance of the bean.
-   * @return the builder, not null
-   */
-  public static BlackFxOptionSmileVolatilitiesSpecification.Builder builder() {
-    return new BlackFxOptionSmileVolatilitiesSpecification.Builder();
-  }
-
+  //-------------------------------------------------------------------------
+  @ImmutableConstructor
   private BlackFxOptionSmileVolatilitiesSpecification(
       FxOptionVolatilitiesName name,
       CurrencyPair currencyPair,
@@ -255,6 +294,81 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
     this.strikeInterpolator = strikeInterpolator;
     this.strikeExtrapolatorLeft = strikeExtrapolatorLeft;
     this.strikeExtrapolatorRight = strikeExtrapolatorRight;
+    this.nodesByTenor = nodes.stream()
+        .collect(Guavate.toImmutableListMultimap(FxOptionVolatilitiesNode::getTenor));
+    ImmutableList<Double> fullDeltas = nodes.stream()
+        .map(FxOptionVolatilitiesNode::getStrike)
+        .distinct()
+        .map(Strike::getValue)
+        .sorted()
+        .collect(toImmutableList());
+
+    int nDeltas = fullDeltas.size() - 1;
+    ArgChecker.isTrue(fullDeltas.get(nDeltas) == 0.5, "0 < deltas <= 0.5");
+    this.deltas = fullDeltas.subList(0, nDeltas); // ATM removed
+    int nParams = nodes.size();
+    for (int i = 0; i < nParams; ++i) {
+      ArgChecker.isTrue(nodes.get(i).getCurrencyPair().equals(currencyPair), "currency pair must be the same");
+      ArgChecker.isTrue(nodes.get(i).getStrike() instanceof DeltaStrike, "Strike must be DeltaStrike");
+    }
+    for (Tenor tenor : nodesByTenor.keys()) {
+      ImmutableList<FxOptionVolatilitiesNode> nodesForTenor = nodesByTenor.get(tenor);
+      // value type, delta, size
+      List<Double> atmDelta = nodesForTenor.stream()
+          .filter(n -> n.getQuoteValueType().equals(ValueType.BLACK_VOLATILITY))
+          .map(n -> n.getStrike().getValue())
+          .sorted()
+          .collect(toList());
+      ArgChecker.isTrue(atmDelta.equals(fullDeltas.subList(nDeltas, nDeltas + 1)));
+      List<Double> rrDelta = nodesForTenor.stream()
+          .filter(n -> n.getQuoteValueType().equals(ValueType.RISK_REVERSAL))
+          .map(n -> n.getStrike().getValue())
+          .sorted()
+          .collect(toList());
+      ArgChecker.isTrue(rrDelta.equals(deltas));
+      List<Double> strDelta = nodesForTenor.stream()
+          .filter(n -> n.getQuoteValueType().equals(ValueType.STRANGLE))
+          .map(n -> n.getStrike().getValue())
+          .sorted()
+          .collect(toList());
+      ArgChecker.isTrue(strDelta.equals(deltas));
+      // convention
+      Set<BusinessDayAdjustment> busAdj = nodesForTenor.stream()
+          .map(FxOptionVolatilitiesNode::getBusinessDayAdjustment)
+          .collect(toSet());
+      ArgChecker.isTrue(busAdj.size() == 1, "BusinessDayAdjustment must be common to all the nodes");
+      Set<DaysAdjustment> offset = nodesForTenor.stream()
+          .map(FxOptionVolatilitiesNode::getSpotDateOffset)
+          .collect(toSet());
+      ArgChecker.isTrue(offset.size() == 1, "DaysAdjustment must be common to all the nodes");
+    }
+  }
+
+  //------------------------- AUTOGENERATED START -------------------------
+  ///CLOVER:OFF
+  /**
+   * The meta-bean for {@code BlackFxOptionSmileVolatilitiesSpecification}.
+   * @return the meta-bean, not null
+   */
+  public static BlackFxOptionSmileVolatilitiesSpecification.Meta meta() {
+    return BlackFxOptionSmileVolatilitiesSpecification.Meta.INSTANCE;
+  }
+
+  static {
+    JodaBeanUtils.registerMetaBean(BlackFxOptionSmileVolatilitiesSpecification.Meta.INSTANCE);
+  }
+
+  /**
+   * The serialization version id.
+   */
+  private static final long serialVersionUID = 1L;
+
+  /**
+   * Returns a builder used to create an instance of the bean.
+   * @return the builder, not null
+   */
+  public static BlackFxOptionSmileVolatilitiesSpecification.Builder builder() {
+    return new BlackFxOptionSmileVolatilitiesSpecification.Builder();
   }
 
   @Override
@@ -274,7 +388,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the name.
+   * Gets the name of the volatilities.
    * @return the value of the property, not null
    */
   @Override
@@ -284,7 +398,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the currencyPair.
+   * Gets the currency pair that the volatilities are for.
    * @return the value of the property, not null
    */
   @Override
@@ -294,7 +408,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the dayCount.
+   * Gets the day count convention used for the expiry.
    * @return the value of the property, not null
    */
   public DayCount getDayCount() {
@@ -303,7 +417,9 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the nodes.
+   * Gets the nodes in the FX option volatilities.
+   * <p>
+   * The nodes are used to find the quotes and build the volatilities.
    * @return the value of the property, not null
    */
   @Override
@@ -836,7 +952,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
 
     //-----------------------------------------------------------------------
     /**
-     * Sets the name.
+     * Sets the name of the volatilities.
      * @param name  the new value, not null
      * @return this, for chaining, not null
      */
@@ -847,7 +963,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
     }
 
     /**
-     * Sets the currencyPair.
+     * Sets the currency pair that the volatilities are for.
      * @param currencyPair  the new value, not null
      * @return this, for chaining, not null
      */
@@ -858,7 +974,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
     }
 
     /**
-     * Sets the dayCount.
+     * Sets the day count convention used for the expiry.
      * @param dayCount  the new value, not null
      * @return this, for chaining, not null
      */
@@ -869,7 +985,9 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
     }
 
     /**
-     * Sets the nodes.
+     * Sets the nodes in the FX option volatilities.
+     * <p>
+     * The nodes are used to find the quotes and build the volatilities.
      * @param nodes  the new value, not null
      * @return this, for chaining, not null
      */

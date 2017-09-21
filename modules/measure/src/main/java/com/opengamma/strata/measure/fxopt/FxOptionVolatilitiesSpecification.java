@@ -20,7 +20,7 @@ import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesName;
 /**
  * The specification of how to build FX option volatilities.
  * <p>
- * This is the definition for a single volatility object, {@code FxOptionVolatilities}.
+ * This is the specification for a single volatility object, {@link FxOptionVolatilities}.
  */
 public interface FxOptionVolatilitiesSpecification {
 
@@ -37,15 +37,6 @@ public interface FxOptionVolatilitiesSpecification {
    * @return the currency pair
    */
   public abstract CurrencyPair getCurrencyPair();
-
-//  /**
-//   * Get the volatility value type.
-//   * <p>
-//   * Typically the volatility type is {@code ValueType#BLACK_VOLATILITY}.
-//   * 
-//   * @return the volatility type
-//   */
-//  public abstract ValueType getVolatilityValueType();
 
   /**
    * Gets the volatilities nodes.

@@ -7,6 +7,7 @@ package com.opengamma.strata.measure.fxopt;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -37,36 +38,68 @@ import com.opengamma.strata.market.option.Strike;
  * A node in the configuration specifying how to build FX option volatilities.
  * <p>
  * Each node is not necessarily associated with an instrument, 
- * but provides the information to create {@code FxOptionVolatilities}. 
+ * but provides the necessary information to create {@code FxOptionVolatilities}. 
  */
 @BeanDefinition
 public final class FxOptionVolatilitiesNode
     implements ImmutableBean, Serializable {
 
+  /**
+   * The currency pair.
+   * <p>
+   * The quote must be based on this currency pair and direction.
+   */
   @PropertyDefinition(validate = "notNull")
   private final CurrencyPair currencyPair;
-
+  /**
+   * The label to use for the node.
+   */
   @PropertyDefinition(validate = "notNull")
   private final String label;
-
+  /**
+   * The offset of the spot value date from the valuation date.
+   */
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment spotDateOffset;
-
+  /**
+   * The business day adjustment to apply to the expiry date.
+   */
   @PropertyDefinition(validate = "notNull")
   private final BusinessDayAdjustment businessDayAdjustment;
-
+  /**
+   * The value type of the quote.
+   */
   @PropertyDefinition(validate = "notNull")
   private final ValueType quoteValueType;
-
+  /**
+   * The quote ID.
+   */
   @PropertyDefinition(validate = "notNull")
   private final QuoteId quoteId;
-
+  /**
+   * The tenor.
+   */
   @PropertyDefinition(validate = "notNull")
   private final Tenor tenor;
-
+  /**
+   * The strike.
+   */
   @PropertyDefinition(validate = "notNull")
   private final Strike strike;
 
+  //-------------------------------------------------------------------------
+  /**
+   * Creates an instance.
+   * 
+   * @param currencyPair  the currency pair
+   * @param spotDateOffset  the spot date offset
+   * @param businessDayAdjustment  the business day adjustment
+   * @param quoteValueType  the quote value type
+   * @param quoteId  the quote ID
+   * @param tenor  the tenor
+   * @param strike  the strike
+   * @return the instance
+   */
   public static FxOptionVolatilitiesNode of(
       CurrencyPair currencyPair,
       DaysAdjustment spotDateOffset,
@@ -76,9 +109,9 @@ public final class FxOptionVolatilitiesNode
       Tenor tenor,
       Strike strike) {
 
-    return new FxOptionVolatilitiesNode(
+    return of(
         currencyPair,
-        quoteId.toString(),  // TODO review this
+        quoteId.toString(),
         spotDateOffset,
         businessDayAdjustment,
         quoteValueType,
@@ -87,7 +120,51 @@ public final class FxOptionVolatilitiesNode
         strike);
   }
 
-  public double timeToExpiry(LocalDate valuationDate, DayCount dayCount, ReferenceData refData) {
+  /**
+   * Creates an instance.
+   * 
+   * @param currencyPair  the currency pair
+   * @param label  the label
+   * @param spotDateOffset  the spot date offset
+   * @param businessDayAdjustment  the business day adjustment
+   * @param quoteValueType  the quote value type
+   * @param quoteId  the quote ID
+   * @param tenor  the tenor
+   * @param strike  the strike
+   * @return the instance
+   */
+  public static FxOptionVolatilitiesNode of(
+      CurrencyPair currencyPair,
+      String label,
+      DaysAdjustment spotDateOffset,
+      BusinessDayAdjustment businessDayAdjustment,
+      ValueType quoteValueType,
+      QuoteId quoteId,
+      Tenor tenor,
+      Strike strike) {
+
+    return new FxOptionVolatilitiesNode(
+        currencyPair,
+        label,
+        spotDateOffset,
+        businessDayAdjustment,
+        quoteValueType,
+        quoteId,
+        tenor,
+        strike);
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Calculates the time to expiry for the valuation date time.
+   * 
+   * @param valuationDateTime  the valuation date time
+   * @param dayCount  the day count
+   * @param refData  the reference data
+   * @return the time to expiry
+   */
+  public double timeToExpiry(ZonedDateTime valuationDateTime, DayCount dayCount, ReferenceData refData) {
+    LocalDate valuationDate = valuationDateTime.toLocalDate();
     LocalDate spotDate = spotDateOffset.adjust(valuationDate, refData);
     LocalDate endDate = businessDayAdjustment.adjust(spotDate.plus(tenor), refData);
     return dayCount.relativeYearFraction(valuationDate, endDate);
@@ -164,7 +241,9 @@ public final class FxOptionVolatilitiesNode
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the currencyPair.
+   * Gets the currency pair.
+   * <p>
+   * The quote must be based on this currency pair and direction.
    * @return the value of the property, not null
    */
   public CurrencyPair getCurrencyPair() {
@@ -173,7 +252,7 @@ public final class FxOptionVolatilitiesNode
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the label.
+   * Gets the label to use for the node.
    * @return the value of the property, not null
    */
   public String getLabel() {
@@ -182,7 +261,7 @@ public final class FxOptionVolatilitiesNode
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the spotDateOffset.
+   * Gets the offset of the spot value date from the valuation date.
    * @return the value of the property, not null
    */
   public DaysAdjustment getSpotDateOffset() {
@@ -191,7 +270,7 @@ public final class FxOptionVolatilitiesNode
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the businessDayAdjustment.
+   * Gets the business day adjustment to apply to the expiry date.
    * @return the value of the property, not null
    */
   public BusinessDayAdjustment getBusinessDayAdjustment() {
@@ -200,7 +279,7 @@ public final class FxOptionVolatilitiesNode
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the quoteValueType.
+   * Gets the value type of the quote.
    * @return the value of the property, not null
    */
   public ValueType getQuoteValueType() {
@@ -209,7 +288,7 @@ public final class FxOptionVolatilitiesNode
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the quoteId.
+   * Gets the quote ID.
    * @return the value of the property, not null
    */
   public QuoteId getQuoteId() {
@@ -645,7 +724,9 @@ public final class FxOptionVolatilitiesNode
 
     //-----------------------------------------------------------------------
     /**
-     * Sets the currencyPair.
+     * Sets the currency pair.
+     * <p>
+     * The quote must be based on this currency pair and direction.
      * @param currencyPair  the new value, not null
      * @return this, for chaining, not null
      */
@@ -656,7 +737,7 @@ public final class FxOptionVolatilitiesNode
     }
 
     /**
-     * Sets the label.
+     * Sets the label to use for the node.
      * @param label  the new value, not null
      * @return this, for chaining, not null
      */
@@ -667,7 +748,7 @@ public final class FxOptionVolatilitiesNode
     }
 
     /**
-     * Sets the spotDateOffset.
+     * Sets the offset of the spot value date from the valuation date.
      * @param spotDateOffset  the new value, not null
      * @return this, for chaining, not null
      */
@@ -678,7 +759,7 @@ public final class FxOptionVolatilitiesNode
     }
 
     /**
-     * Sets the businessDayAdjustment.
+     * Sets the business day adjustment to apply to the expiry date.
      * @param businessDayAdjustment  the new value, not null
      * @return this, for chaining, not null
      */
@@ -689,7 +770,7 @@ public final class FxOptionVolatilitiesNode
     }
 
     /**
-     * Sets the quoteValueType.
+     * Sets the value type of the quote.
      * @param quoteValueType  the new value, not null
      * @return this, for chaining, not null
      */
@@ -700,7 +781,7 @@ public final class FxOptionVolatilitiesNode
     }
 
     /**
-     * Sets the quoteId.
+     * Sets the quote ID.
      * @param quoteId  the new value, not null
      * @return this, for chaining, not null
      */
