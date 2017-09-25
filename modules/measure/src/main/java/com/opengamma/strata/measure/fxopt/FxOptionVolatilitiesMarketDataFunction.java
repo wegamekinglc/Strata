@@ -9,7 +9,6 @@ import static com.opengamma.strata.collect.Guavate.toImmutableList;
 
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
-import java.util.Optional;
 import java.util.stream.IntStream;
 
 import com.google.common.collect.ImmutableList;
@@ -17,7 +16,6 @@ import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.calc.marketdata.MarketDataConfig;
 import com.opengamma.strata.calc.marketdata.MarketDataFunction;
 import com.opengamma.strata.calc.marketdata.MarketDataRequirements;
-import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.data.scenario.MarketDataBox;
 import com.opengamma.strata.data.scenario.ScenarioMarketData;
@@ -36,13 +34,8 @@ public class FxOptionVolatilitiesMarketDataFunction
   @Override
   public MarketDataRequirements requirements(FxOptionVolatilitiesId id, MarketDataConfig marketDataConfig) {
 
-    FxOptionVolatilitiesDefinition volatilitiesDefinition;
-    try {
-      volatilitiesDefinition = marketDataConfig.get(FxOptionVolatilitiesDefinition.class, id.getName().getName());
-    } catch (Exception e) {
-      throw new IllegalArgumentException(
-          Messages.format("FxOptionVolatilitiesDefinition for {} must be defined in MarketDataConfig", id.getName().getName()));
-    }
+    FxOptionVolatilitiesDefinition volatilitiesDefinition = marketDataConfig.get(
+        FxOptionVolatilitiesDefinition.class, id.getName().getName());
     return MarketDataRequirements.builder()
         .addValues(volatilitiesDefinition.volatilitiesInputs())
         .build();
@@ -57,13 +50,10 @@ public class FxOptionVolatilitiesMarketDataFunction
 
     FxOptionVolatilitiesDefinition volatilitiesDefinition =
         marketDataConfig.get(FxOptionVolatilitiesDefinition.class, id.getName().getName());
-    Optional<ValuationZoneTimeDefinition> zoneTimeDefinition = marketDataConfig.find(ValuationZoneTimeDefinition.class);
-    if (!zoneTimeDefinition.isPresent()) {
-      throw new IllegalArgumentException("ValuationZoneTimeDefinition must be defined in MarketDataConfig");
-    }
+    ValuationZoneTimeDefinition zoneTimeDefinition = marketDataConfig.get(ValuationZoneTimeDefinition.class);
     int nScenarios = marketData.getScenarioCount();
     MarketDataBox<LocalDate> valuationDates = marketData.getValuationDate();
-    MarketDataBox<ZonedDateTime> valuationDateTimes = zoneTimeDefinition.get().toZonedDateTime(valuationDates);
+    MarketDataBox<ZonedDateTime> valuationDateTimes = zoneTimeDefinition.toZonedDateTime(valuationDates);
 
     int nParameters = volatilitiesDefinition.getParameterCount();
     ImmutableList<MarketDataBox<Double>> inputs = volatilitiesDefinition.volatilitiesInputs().stream()

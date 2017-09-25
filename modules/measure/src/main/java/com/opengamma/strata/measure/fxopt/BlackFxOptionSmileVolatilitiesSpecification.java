@@ -42,6 +42,7 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Guavate;
+import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.collect.tuple.Pair;
@@ -195,6 +196,8 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
       DoubleArray parameters,
       ReferenceData refData) {
 
+    ArgChecker.isTrue(parameters.size() == getParameterCount(),
+        Messages.format("size of parameters must be {}, but found {}", getParameterCount(), parameters.size()));
     ImmutableListMultimap.Builder<Tenor, Pair<FxOptionVolatilitiesNode, Double>> builder = ImmutableListMultimap.builder();
     for (Tenor tenor : nodesByTenor.keys()) {
       ImmutableList<Pair<FxOptionVolatilitiesNode, Double>> nodesAndQuotes = nodesByTenor.get(tenor).stream()
@@ -204,7 +207,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
     }
     ImmutableListMultimap<Tenor, Pair<FxOptionVolatilitiesNode, Double>> nodesAndQuotesByTenor = builder.build();
 
-    List<Tenor> tenors = new ArrayList<>(nodesByTenor.keys());
+    List<Tenor> tenors = new ArrayList<>(nodesByTenor.keySet());
     Collections.sort(tenors);
     int nTenors = tenors.size();
     int nDeltas = deltas.size();
@@ -304,7 +307,7 @@ public final class BlackFxOptionSmileVolatilitiesSpecification
         .collect(toImmutableList());
 
     int nDeltas = fullDeltas.size() - 1;
-    ArgChecker.isTrue(fullDeltas.get(nDeltas) == 0.5, "0 < deltas <= 0.5");
+    ArgChecker.isTrue(fullDeltas.get(nDeltas) == 0.5, "0 < delta <= 0.5");
     this.deltas = fullDeltas.subList(0, nDeltas); // ATM removed
     int nParams = nodes.size();
     for (int i = 0; i < nParams; ++i) {

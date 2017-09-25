@@ -53,7 +53,7 @@ public final class ValuationZoneTimeDefinition
   /**
    * The zone ID.
    */
-  @PropertyDefinition(validate = "notNull", get = "private")
+  @PropertyDefinition(validate = "notNull")
   private final ZoneId zoneId;
 
   /**
@@ -74,14 +74,9 @@ public final class ValuationZoneTimeDefinition
    * @return the zoned date time
    */
   public MarketDataBox<ZonedDateTime> toZonedDateTime(MarketDataBox<LocalDate> dates) {
-    if (localTimes.getScenarioCount() == 1) {
-      ArgChecker.isTrue(dates.isSingleValue(), "the number of scenarios must be coherent");
-    } else {
-      ArgChecker.isTrue(dates.isSingleValue() || localTimes.getScenarioCount() == dates.getScenarioCount(),
-          "the number of scenarios must be coherent");
-    }
     if (dates.isScenarioValue()) {
       int nScenarios = dates.getScenarioCount();
+      ArgChecker.isTrue(nScenarios == localTimes.getScenarioCount(), "the number of scenarios must be the same");
       List<ZonedDateTime> zonedDateTimes = IntStream.range(0, nScenarios)
           .mapToObj(i -> dates.getValue(i).atTime(localTimes.get(i)).atZone(zoneId))
           .collect(Collectors.toList());
@@ -140,7 +135,7 @@ public final class ValuationZoneTimeDefinition
    * Gets the zone ID.
    * @return the value of the property, not null
    */
-  private ZoneId getZoneId() {
+  public ZoneId getZoneId() {
     return zoneId;
   }
 

@@ -11,16 +11,17 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.joda.beans.Bean;
+import org.joda.beans.BeanBuilder;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.gen.BeanDefinition;
 import org.joda.beans.gen.PropertyDefinition;
-import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
+import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.ReferenceData;
@@ -34,7 +35,7 @@ import com.opengamma.strata.pricer.fxopt.FxOptionVolatilities;
  * This wraps the specification for a single volatility object, {@code FxOptionVolatilities}.
  * See {@code FxOptionVolatilitiesSpecification} for detail.
  */
-@BeanDefinition
+@BeanDefinition(builderScope = "private")
 public final class FxOptionVolatilitiesDefinition
     implements ImmutableBean, Serializable {
 
@@ -109,14 +110,6 @@ public final class FxOptionVolatilitiesDefinition
    */
   private static final long serialVersionUID = 1L;
 
-  /**
-   * Returns a builder used to create an instance of the bean.
-   * @return the builder, not null
-   */
-  public static FxOptionVolatilitiesDefinition.Builder builder() {
-    return new FxOptionVolatilitiesDefinition.Builder();
-  }
-
   private FxOptionVolatilitiesDefinition(
       FxOptionVolatilitiesSpecification specification) {
     JodaBeanUtils.notNull(specification, "specification");
@@ -138,14 +131,6 @@ public final class FxOptionVolatilitiesDefinition
   }
 
   //-----------------------------------------------------------------------
-  /**
-   * Returns a builder that allows this bean to be mutated.
-   * @return the mutable builder, not null
-   */
-  public Builder toBuilder() {
-    return new Builder(this);
-  }
-
   @Override
   public boolean equals(Object obj) {
     if (obj == this) {
@@ -212,7 +197,7 @@ public final class FxOptionVolatilitiesDefinition
     }
 
     @Override
-    public FxOptionVolatilitiesDefinition.Builder builder() {
+    public BeanBuilder<? extends FxOptionVolatilitiesDefinition> builder() {
       return new FxOptionVolatilitiesDefinition.Builder();
     }
 
@@ -260,7 +245,7 @@ public final class FxOptionVolatilitiesDefinition
   /**
    * The bean-builder for {@code FxOptionVolatilitiesDefinition}.
    */
-  public static final class Builder extends DirectFieldsBeanBuilder<FxOptionVolatilitiesDefinition> {
+  private static final class Builder extends DirectPrivateBeanBuilder<FxOptionVolatilitiesDefinition> {
 
     private FxOptionVolatilitiesSpecification specification;
 
@@ -268,14 +253,6 @@ public final class FxOptionVolatilitiesDefinition
      * Restricted constructor.
      */
     private Builder() {
-    }
-
-    /**
-     * Restricted copy constructor.
-     * @param beanToCopy  the bean to copy from, not null
-     */
-    private Builder(FxOptionVolatilitiesDefinition beanToCopy) {
-      this.specification = beanToCopy.getSpecification();
     }
 
     //-----------------------------------------------------------------------
@@ -302,27 +279,9 @@ public final class FxOptionVolatilitiesDefinition
     }
 
     @Override
-    public Builder set(MetaProperty<?> property, Object value) {
-      super.set(property, value);
-      return this;
-    }
-
-    @Override
     public FxOptionVolatilitiesDefinition build() {
       return new FxOptionVolatilitiesDefinition(
           specification);
-    }
-
-    //-----------------------------------------------------------------------
-    /**
-     * Sets the FX option volatility specification.
-     * @param specification  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder specification(FxOptionVolatilitiesSpecification specification) {
-      JodaBeanUtils.notNull(specification, "specification");
-      this.specification = specification;
-      return this;
     }
 
     //-----------------------------------------------------------------------

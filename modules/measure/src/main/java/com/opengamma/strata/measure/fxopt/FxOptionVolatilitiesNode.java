@@ -12,16 +12,17 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.joda.beans.Bean;
+import org.joda.beans.BeanBuilder;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.gen.BeanDefinition;
 import org.joda.beans.gen.PropertyDefinition;
-import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
+import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyPair;
@@ -39,7 +40,7 @@ import com.opengamma.strata.market.option.Strike;
  * Each node is not necessarily associated with an instrument, 
  * but provides the necessary information to create {@code FxOptionVolatilities}. 
  */
-@BeanDefinition
+@BeanDefinition(builderScope = "private")
 public final class FxOptionVolatilitiesNode
     implements ImmutableBean, Serializable {
 
@@ -187,14 +188,6 @@ public final class FxOptionVolatilitiesNode
    */
   private static final long serialVersionUID = 1L;
 
-  /**
-   * Returns a builder used to create an instance of the bean.
-   * @return the builder, not null
-   */
-  public static FxOptionVolatilitiesNode.Builder builder() {
-    return new FxOptionVolatilitiesNode.Builder();
-  }
-
   private FxOptionVolatilitiesNode(
       CurrencyPair currencyPair,
       String label,
@@ -302,14 +295,6 @@ public final class FxOptionVolatilitiesNode
   }
 
   //-----------------------------------------------------------------------
-  /**
-   * Returns a builder that allows this bean to be mutated.
-   * @return the mutable builder, not null
-   */
-  public Builder toBuilder() {
-    return new Builder(this);
-  }
-
   @Override
   public boolean equals(Object obj) {
     if (obj == this) {
@@ -453,7 +438,7 @@ public final class FxOptionVolatilitiesNode
     }
 
     @Override
-    public FxOptionVolatilitiesNode.Builder builder() {
+    public BeanBuilder<? extends FxOptionVolatilitiesNode> builder() {
       return new FxOptionVolatilitiesNode.Builder();
     }
 
@@ -571,7 +556,7 @@ public final class FxOptionVolatilitiesNode
   /**
    * The bean-builder for {@code FxOptionVolatilitiesNode}.
    */
-  public static final class Builder extends DirectFieldsBeanBuilder<FxOptionVolatilitiesNode> {
+  private static final class Builder extends DirectPrivateBeanBuilder<FxOptionVolatilitiesNode> {
 
     private CurrencyPair currencyPair;
     private String label;
@@ -586,21 +571,6 @@ public final class FxOptionVolatilitiesNode
      * Restricted constructor.
      */
     private Builder() {
-    }
-
-    /**
-     * Restricted copy constructor.
-     * @param beanToCopy  the bean to copy from, not null
-     */
-    private Builder(FxOptionVolatilitiesNode beanToCopy) {
-      this.currencyPair = beanToCopy.getCurrencyPair();
-      this.label = beanToCopy.getLabel();
-      this.spotDateOffset = beanToCopy.getSpotDateOffset();
-      this.businessDayAdjustment = beanToCopy.getBusinessDayAdjustment();
-      this.quoteValueType = beanToCopy.getQuoteValueType();
-      this.quoteId = beanToCopy.getQuoteId();
-      this.tenor = beanToCopy.getTenor();
-      this.strike = beanToCopy.getStrike();
     }
 
     //-----------------------------------------------------------------------
@@ -662,12 +632,6 @@ public final class FxOptionVolatilitiesNode
     }
 
     @Override
-    public Builder set(MetaProperty<?> property, Object value) {
-      super.set(property, value);
-      return this;
-    }
-
-    @Override
     public FxOptionVolatilitiesNode build() {
       return new FxOptionVolatilitiesNode(
           currencyPair,
@@ -678,97 +642,6 @@ public final class FxOptionVolatilitiesNode
           quoteId,
           tenor,
           strike);
-    }
-
-    //-----------------------------------------------------------------------
-    /**
-     * Sets the currency pair.
-     * <p>
-     * The quote must be based on this currency pair and direction.
-     * @param currencyPair  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder currencyPair(CurrencyPair currencyPair) {
-      JodaBeanUtils.notNull(currencyPair, "currencyPair");
-      this.currencyPair = currencyPair;
-      return this;
-    }
-
-    /**
-     * Sets the label to use for the node.
-     * @param label  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder label(String label) {
-      JodaBeanUtils.notNull(label, "label");
-      this.label = label;
-      return this;
-    }
-
-    /**
-     * Sets the offset of the spot value date from the valuation date.
-     * @param spotDateOffset  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder spotDateOffset(DaysAdjustment spotDateOffset) {
-      JodaBeanUtils.notNull(spotDateOffset, "spotDateOffset");
-      this.spotDateOffset = spotDateOffset;
-      return this;
-    }
-
-    /**
-     * Sets the business day adjustment to apply to the expiry date.
-     * @param businessDayAdjustment  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder businessDayAdjustment(BusinessDayAdjustment businessDayAdjustment) {
-      JodaBeanUtils.notNull(businessDayAdjustment, "businessDayAdjustment");
-      this.businessDayAdjustment = businessDayAdjustment;
-      return this;
-    }
-
-    /**
-     * Sets the value type of the quote.
-     * @param quoteValueType  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder quoteValueType(ValueType quoteValueType) {
-      JodaBeanUtils.notNull(quoteValueType, "quoteValueType");
-      this.quoteValueType = quoteValueType;
-      return this;
-    }
-
-    /**
-     * Sets the quote ID.
-     * @param quoteId  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder quoteId(QuoteId quoteId) {
-      JodaBeanUtils.notNull(quoteId, "quoteId");
-      this.quoteId = quoteId;
-      return this;
-    }
-
-    /**
-     * Sets the tenor.
-     * @param tenor  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder tenor(Tenor tenor) {
-      JodaBeanUtils.notNull(tenor, "tenor");
-      this.tenor = tenor;
-      return this;
-    }
-
-    /**
-     * Sets the strike.
-     * @param strike  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder strike(Strike strike) {
-      JodaBeanUtils.notNull(strike, "strike");
-      this.strike = strike;
-      return this;
     }
 
     //-----------------------------------------------------------------------

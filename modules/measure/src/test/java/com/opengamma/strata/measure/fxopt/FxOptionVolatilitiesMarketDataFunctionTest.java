@@ -7,7 +7,13 @@ package com.opengamma.strata.measure.fxopt;
 
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
+import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
+import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
+import static com.opengamma.strata.basics.date.HolidayCalendarIds.USNY;
+import static com.opengamma.strata.market.curve.interpolator.CurveExtrapolators.FLAT;
+import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.LINEAR;
+import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.PCHIP;
 import static com.opengamma.strata.measure.Measures.PRESENT_VALUE;
 import static com.opengamma.strata.product.common.LongShort.SHORT;
 import static java.util.stream.Collectors.toList;
@@ -35,10 +41,8 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
-import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
-import com.opengamma.strata.basics.date.HolidayCalendarIds;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.OvernightIndices;
 import com.opengamma.strata.calc.CalculationRules;
@@ -72,21 +76,25 @@ import com.opengamma.strata.market.curve.CurveGroupId;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurveDefinition;
-import com.opengamma.strata.market.curve.interpolator.CurveExtrapolators;
-import com.opengamma.strata.market.curve.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.curve.node.FixedOvernightSwapCurveNode;
 import com.opengamma.strata.market.curve.node.FxSwapCurveNode;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.option.DeltaStrike;
+import com.opengamma.strata.market.option.SimpleStrike;
 import com.opengamma.strata.market.option.Strike;
 import com.opengamma.strata.market.param.ParameterizedData;
 import com.opengamma.strata.market.param.PointShifts;
 import com.opengamma.strata.market.param.PointShiftsBuilder;
+import com.opengamma.strata.market.surface.InterpolatedNodalSurface;
+import com.opengamma.strata.market.surface.Surfaces;
+import com.opengamma.strata.market.surface.interpolator.GridSurfaceInterpolator;
+import com.opengamma.strata.market.surface.interpolator.SurfaceInterpolator;
 import com.opengamma.strata.measure.StandardComponents;
 import com.opengamma.strata.measure.ValuationZoneTimeDefinition;
 import com.opengamma.strata.measure.rate.RatesMarketDataLookup;
 import com.opengamma.strata.pricer.curve.CurveCalibrator;
 import com.opengamma.strata.pricer.fxopt.BlackFxOptionSmileVolatilities;
+import com.opengamma.strata.pricer.fxopt.BlackFxOptionSurfaceVolatilities;
 import com.opengamma.strata.pricer.fxopt.BlackFxVanillaOptionTradePricer;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesId;
 import com.opengamma.strata.pricer.fxopt.FxOptionVolatilitiesName;
@@ -107,17 +115,15 @@ import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
 @Test
 public class FxOptionVolatilitiesMarketDataFunctionTest {
 
-  // TODO test with surface
-
   private static final ReferenceData REF_DATA = ReferenceData.standard();
   private static final LocalDate VALUATION_DATE = LocalDate.of(2017, 2, 15);
   private static final LocalTime VALUATION_TIME = LocalTime.NOON;
   private static final LocalTime VALUATION_TIME_1 = LocalTime.MIDNIGHT;
   private static final ZoneId ZONE = ZoneId.of("Z");
   private static final CurrencyPair GBP_USD = CurrencyPair.of(GBP, USD);
-  private static final HolidayCalendarId NY_LO = HolidayCalendarIds.USNY.combinedWith(HolidayCalendarIds.GBLO);
-  private static final DaysAdjustment SPOT_OFFSET = DaysAdjustment.ofBusinessDays(2, NY_LO);
-  private static final BusinessDayAdjustment BUSS_ADJ = BusinessDayAdjustment.of(BusinessDayConventions.FOLLOWING, NY_LO);
+  private static final HolidayCalendarId NY_LO = USNY.combinedWith(GBLO);
+  private static final DaysAdjustment SPOT_OFFSET = DaysAdjustment.NONE;
+  private static final BusinessDayAdjustment BUSS_ADJ = BusinessDayAdjustment.of(FOLLOWING, NY_LO);
 
   private static final List<Tenor> VOL_TENORS = ImmutableList.of(Tenor.TENOR_3M, Tenor.TENOR_6M);
   private static final List<Strike> STRIKES = ImmutableList.of(
@@ -204,7 +210,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
   private static final FxOptionVolatilitiesId VOL_ID = FxOptionVolatilitiesId.of(VOL_NAME);
   private static final FxOptionVolatilitiesDefinition VOL_DEFINITION =
       FxOptionVolatilitiesDefinition.of(BlackFxOptionSmileVolatilitiesSpecification.of(
-          VOL_NAME, GBP_USD, ACT_365F, VOL_NODES, CurveInterpolators.LINEAR, CurveInterpolators.LINEAR));
+          VOL_NAME, GBP_USD, ACT_365F, VOL_NODES, LINEAR, PCHIP));
   private static final ValuationZoneTimeDefinition ZT_DEFINITION = ValuationZoneTimeDefinition.of(
       ScenarioArray.of(VALUATION_TIME), ZONE);
   private static final ValuationZoneTimeDefinition SCENARIO_ZT_DEFINITION = ValuationZoneTimeDefinition.of(
@@ -214,9 +220,9 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
   private static final CurveName USD_CURVE_NAME = CurveName.of("USD-DSCON-OIS");
   private static final CurveDefinition USD_CURVE_DEFINITION = InterpolatedNodalCurveDefinition.builder()
       .dayCount(ACT_365F)
-      .interpolator(CurveInterpolators.LINEAR)
-      .extrapolatorLeft(CurveExtrapolators.FLAT)
-      .extrapolatorRight(CurveExtrapolators.FLAT)
+      .interpolator(LINEAR)
+      .extrapolatorLeft(FLAT)
+      .extrapolatorRight(FLAT)
       .name(USD_CURVE_NAME)
       .nodes(USD_NODES)
       .xValueType(ValueType.YEAR_FRACTION)
@@ -230,9 +236,9 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
   private static final CurveName GBP_CURVE_NAME = CurveName.of("GBP-DSC-FX");
   private static final CurveDefinition GBP_CURVE_DEFINITION = InterpolatedNodalCurveDefinition.builder()
       .dayCount(ACT_365F)
-      .interpolator(CurveInterpolators.LINEAR)
-      .extrapolatorLeft(CurveExtrapolators.FLAT)
-      .extrapolatorRight(CurveExtrapolators.FLAT)
+      .interpolator(LINEAR)
+      .extrapolatorLeft(FLAT)
+      .extrapolatorRight(FLAT)
       .name(GBP_CURVE_NAME)
       .nodes(GBP_NODES)
       .xValueType(ValueType.YEAR_FRACTION)
@@ -309,9 +315,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
     }
     InterpolatedStrikeSmileDeltaTermStructure term = InterpolatedStrikeSmileDeltaTermStructure.of(
         DoubleArray.copyOf(expiry), DoubleArray.of(0.1, 0.25), DoubleArray.copyOf(atm), DoubleMatrix.copyOf(rr),
-        DoubleMatrix.copyOf(str), ACT_365F,
-        CurveInterpolators.LINEAR, CurveExtrapolators.FLAT, CurveExtrapolators.FLAT,
-        CurveInterpolators.LINEAR, CurveExtrapolators.FLAT, CurveExtrapolators.FLAT);
+        DoubleMatrix.copyOf(str), ACT_365F, LINEAR, FLAT, FLAT, PCHIP, FLAT, FLAT);
     EXP_VOLS = BlackFxOptionSmileVolatilities.of(VOL_NAME, GBP_USD, VALUATION_DATE.atTime(VALUATION_TIME).atZone(ZONE), term);
     for (int i = 0; i < nSmiles; ++i) {
       atm[i] = VOL_QUOTES_1[i][0];
@@ -322,9 +326,7 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
     }
     InterpolatedStrikeSmileDeltaTermStructure term1 = InterpolatedStrikeSmileDeltaTermStructure.of(
         DoubleArray.copyOf(expiry), DoubleArray.of(0.1, 0.25), DoubleArray.copyOf(atm), DoubleMatrix.copyOf(rr),
-        DoubleMatrix.copyOf(str), ACT_365F,
-        CurveInterpolators.LINEAR, CurveExtrapolators.FLAT, CurveExtrapolators.FLAT,
-        CurveInterpolators.LINEAR, CurveExtrapolators.FLAT, CurveExtrapolators.FLAT);
+        DoubleMatrix.copyOf(str), ACT_365F, LINEAR, FLAT, FLAT, PCHIP, FLAT, FLAT);
     EXP_VOLS_1 = BlackFxOptionSmileVolatilities.of(
         VOL_NAME, GBP_USD, VALUATION_DATE_1.atTime(VALUATION_TIME_1).atZone(ZONE), term1);
   }
@@ -435,6 +437,69 @@ public class FxOptionVolatilitiesMarketDataFunctionTest {
     // dependency graph is absent, thus scenarios are not created
     assertTrue(computed.getScenarioCount() == 1);
     assertEquals(computed.get(0), expected);
+  }
+
+  private static final List<Tenor> SURFACE_TENORS = ImmutableList.of(Tenor.TENOR_3M, Tenor.TENOR_6M, Tenor.TENOR_1Y);
+  private static final List<Double> SURFACE_STRIKES = ImmutableList.of(1.35, 1.5, 1.65, 1.7);
+  private static final double[][] SURFACE_VOL_QUOTES = new double[][] {
+      {0.19, 0.15, 0.13, 0.14}, {0.14, 0.11, 0.09, 0.09}, {0.11, 0.09, 0.07, 0.07}};
+  private static final ImmutableList<FxOptionVolatilitiesNode> SURFACE_NODES;
+  private static final ImmutableMap<QuoteId, Double> SURFACE_QUOTES;
+  static {
+    ImmutableList.Builder<FxOptionVolatilitiesNode> nodeBuilder = ImmutableList.builder();
+    ImmutableMap.Builder<QuoteId, Double> quoteBuilder = ImmutableMap.builder();
+    for (int i = 0; i < SURFACE_TENORS.size(); ++i) {
+      for (int j = 0; j < SURFACE_STRIKES.size(); ++j) {
+        QuoteId quoteId = QuoteId.of(StandardId.of(
+            "OG", GBP_USD.toString() + "_" + SURFACE_TENORS.get(i).toString() + "_" + SURFACE_STRIKES.get(j)));
+        quoteBuilder.put(quoteId, SURFACE_VOL_QUOTES[i][j]);
+        nodeBuilder.add(FxOptionVolatilitiesNode.of(
+            GBP_USD, SPOT_OFFSET, BUSS_ADJ, ValueType.BLACK_VOLATILITY, quoteId, SURFACE_TENORS.get(i),
+            SimpleStrike.of(SURFACE_STRIKES.get(j))));
+      }
+    }
+    SURFACE_NODES = nodeBuilder.build();
+    SURFACE_QUOTES = quoteBuilder.build();
+  }
+  private static final MarketData SURFACE_MARKET_DATA = MARKET_DATA.combinedWith(MarketData.of(VALUATION_DATE, SURFACE_QUOTES));
+  private static final FxOptionVolatilitiesDefinition VOL_DEFINITION_SURFACE = FxOptionVolatilitiesDefinition.of(
+      BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecification.of(
+          VOL_NAME, GBP_USD, ACT_365F, SURFACE_NODES, LINEAR, FLAT, FLAT, PCHIP, FLAT, FLAT));
+  private static final MarketDataConfig SURFACE_CONFIG = MarketDataConfig.builder()
+      .add(CURVE_GROUP_NAME, CURVE_GROUP_DEFINITION)
+      .add(VOL_ID.getName().getName(), VOL_DEFINITION_SURFACE)
+      .addDefault(ZT_DEFINITION)
+      .build();
+  private static final BlackFxOptionSurfaceVolatilities SURFACE_EXP_VOLS;
+  static {
+    List<Double> expiry = new ArrayList<>();
+    List<Double> strike = new ArrayList<>();
+    List<Double> vols = new ArrayList<>();
+    for (int i = 0; i < SURFACE_TENORS.size(); ++i) {
+      for (int j = 0; j < SURFACE_STRIKES.size(); ++j) {
+        double yearFraction = ACT_365F.relativeYearFraction(
+            VALUATION_DATE, BUSS_ADJ.adjust(SPOT_OFFSET.adjust(VALUATION_DATE, REF_DATA).plus(SURFACE_TENORS.get(i)), REF_DATA));
+        expiry.add(yearFraction);
+        strike.add(SURFACE_STRIKES.get(j));
+        vols.add(SURFACE_VOL_QUOTES[i][j]);
+      }
+    }
+    SurfaceInterpolator interp = GridSurfaceInterpolator.of(LINEAR, PCHIP);
+    InterpolatedNodalSurface surface = InterpolatedNodalSurface.ofUnsorted(
+        Surfaces.blackVolatilityByExpiryStrike(VOL_NAME.getName(), ACT_365F),
+        DoubleArray.copyOf(expiry), DoubleArray.copyOf(strike), DoubleArray.copyOf(vols), interp);
+    SURFACE_EXP_VOLS = BlackFxOptionSurfaceVolatilities.of(
+        VOL_NAME, GBP_USD, VALUATION_DATE.atTime(VALUATION_TIME).atZone(ZONE), surface);
+  }
+
+  public void test_surface() {
+    MarketData marketDataCalibrated = StandardComponents.marketDataFactory().create(
+        REQUIREMENTS, SURFACE_CONFIG, SURFACE_MARKET_DATA, REF_DATA);
+    Results results = CALC_RUNNER.calculate(RULES, TARGETS, COLUMN, marketDataCalibrated, REF_DATA);
+    CurrencyAmount computed = (CurrencyAmount) results.get(0, 0).getValue();
+    CurrencyAmount expected = PRICER.presentValue(OPTION_TRADE.resolve(REF_DATA), EXP_RATES, SURFACE_EXP_VOLS)
+        .convertedTo(USD, EXP_RATES);
+    assertEquals(computed, expected);
   }
 
 }
