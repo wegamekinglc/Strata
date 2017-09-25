@@ -90,6 +90,8 @@ public final class FxOptionVolatilitiesNode
   //-------------------------------------------------------------------------
   /**
    * Creates an instance.
+   * <p>
+   * The label is created from {@code quoteId}.
    * 
    * @param currencyPair  the currency pair
    * @param spotDateOffset  the spot date offset

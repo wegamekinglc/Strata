@@ -34,6 +34,7 @@ import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.interpolator.CurveExtrapolator;
@@ -183,6 +184,8 @@ public final class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecificatio
       DoubleArray parameters,
       ReferenceData refData) {
 
+    ArgChecker.isTrue(parameters.size() == getParameterCount(),
+        Messages.format("size of parameters must be {}, but found {}", getParameterCount(), parameters.size()));
     DoubleArray strikes = DoubleArray.ofUnsafe(
         nodes.stream().mapToDouble(n -> n.getStrike().getValue()).toArray());
     DoubleArray expiries = DoubleArray.ofUnsafe(
