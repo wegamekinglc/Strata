@@ -63,8 +63,6 @@ public class BlackFxOptionInterpolatedNodalSurfaceVolatilitiesSpecificationTest 
   private static final BusinessDayAdjustment BUSS_ADJ = BusinessDayAdjustment.of(FOLLOWING, NY_LO);
   private static final List<Tenor> TENORS = ImmutableList.of(Tenor.TENOR_3M, Tenor.TENOR_6M, Tenor.TENOR_1Y);
   private static final List<Double> STRIKES = ImmutableList.of(1.35, 1.5, 1.65, 1.7);
-  private static final double[][] VOL_QUOTES = new double[][] {
-      {0.19, 0.15, 0.13, 0.14}, {0.14, 0.11, 0.09, 0.09}, {0.11, 0.09, 0.07, 0.07}};
   private static final ImmutableList<FxOptionVolatilitiesNode> NODES;
   private static final ImmutableList<QuoteId> QUOTE_IDS;
   static {
