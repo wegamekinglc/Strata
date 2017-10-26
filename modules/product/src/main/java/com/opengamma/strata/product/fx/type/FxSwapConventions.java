@@ -42,6 +42,22 @@ public final class FxSwapConventions {
   public static final FxSwapConvention GBP_USD =
       FxSwapConvention.of(StandardFxSwapConventions.GBP_USD.getName());
 
+  /**
+   * The "USD/ZAR" FX Swap convention.
+   * <p>
+   * USD/ZAR convention with 2 days spot date.
+   */
+  public static final FxSwapConvention USD_ZAR =
+      FxSwapConvention.of(StandardFxSwapConventions.USD_ZAR.getName());
+
+  /**
+   * The "USD/MXN" FX Swap convention.
+   * <p>
+   * USD/MXN convention with 2 days spot date.
+   */
+  public static final FxSwapConvention USD_MXN =
+      FxSwapConvention.of(StandardFxSwapConventions.USD_MXN.getName());
+
   //-------------------------------------------------------------------------
   /**
    * Restricted constructor.
