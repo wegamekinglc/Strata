@@ -48,17 +48,62 @@ public class FxOptionVolatilitiesNodeTest {
   private static final HolidayCalendarId CALENDAR = GBLO.combinedWith(EUTA);
   private static final DaysAdjustment SPOT_DATE_OFFSET = DaysAdjustment.ofBusinessDays(2, CALENDAR);
   private static final BusinessDayAdjustment BDA = BusinessDayAdjustment.of(BusinessDayConventions.FOLLOWING, CALENDAR);
+  private static final DaysAdjustment EXPIRY_DATE_OFFSET = DaysAdjustment.ofBusinessDays(-3, CALENDAR);
   private static final QuoteId QUOTE_ID = QuoteId.of(StandardId.of("OG", "TEST"));
   private static final Strike STRIKE = SimpleStrike.of(0.95);
 
-  public void test_of() {
-    FxOptionVolatilitiesNode test = FxOptionVolatilitiesNode.of(
-        EUR_GBP, LABEL, SPOT_DATE_OFFSET, BDA, ValueType.BLACK_VOLATILITY, QUOTE_ID, Tenor.TENOR_3M, STRIKE);
+  public void test_builder() {
+    FxOptionVolatilitiesNode test = FxOptionVolatilitiesNode.builder()
+        .currencyPair(EUR_GBP)
+        .label(LABEL)
+        .spotDateOffset(SPOT_DATE_OFFSET)
+        .businessDayAdjustment(BDA)
+        .expiryDateOffset(EXPIRY_DATE_OFFSET)
+        .quoteValueType(ValueType.BLACK_VOLATILITY)
+        .quoteId(QUOTE_ID)
+        .tenor(Tenor.TENOR_3M)
+        .strike(STRIKE)
+        .build();
     assertEquals(test.getBusinessDayAdjustment(), BDA);
     assertEquals(test.getCurrencyPair(), EUR_GBP);
     assertEquals(test.getLabel(), LABEL);
     assertEquals(test.getQuoteValueType(), ValueType.BLACK_VOLATILITY);
     assertEquals(test.getSpotDateOffset(), SPOT_DATE_OFFSET);
+    assertEquals(test.getExpiryDateOffset(), EXPIRY_DATE_OFFSET);
+    assertEquals(test.getStrike(), STRIKE);
+    assertEquals(test.getTenor(), Tenor.TENOR_3M);
+  }
+
+  public void test_builder_noExp() {
+    FxOptionVolatilitiesNode test = FxOptionVolatilitiesNode.builder()
+        .currencyPair(EUR_GBP)
+        .label(LABEL)
+        .spotDateOffset(SPOT_DATE_OFFSET)
+        .businessDayAdjustment(BDA)
+        .quoteValueType(ValueType.BLACK_VOLATILITY)
+        .quoteId(QUOTE_ID)
+        .tenor(Tenor.TENOR_3M)
+        .strike(STRIKE)
+        .build();
+    assertEquals(test.getBusinessDayAdjustment(), BDA);
+    assertEquals(test.getCurrencyPair(), EUR_GBP);
+    assertEquals(test.getLabel(), LABEL);
+    assertEquals(test.getQuoteValueType(), ValueType.BLACK_VOLATILITY);
+    assertEquals(test.getSpotDateOffset(), SPOT_DATE_OFFSET);
+    assertEquals(test.getExpiryDateOffset(), DaysAdjustment.ofBusinessDays(-2, CALENDAR));
+    assertEquals(test.getStrike(), STRIKE);
+    assertEquals(test.getTenor(), Tenor.TENOR_3M);
+  }
+
+  public void test_of() {
+    FxOptionVolatilitiesNode test = FxOptionVolatilitiesNode.of(
+        EUR_GBP, SPOT_DATE_OFFSET, BDA, ValueType.BLACK_VOLATILITY, QUOTE_ID, Tenor.TENOR_3M, STRIKE);
+    assertEquals(test.getBusinessDayAdjustment(), BDA);
+    assertEquals(test.getCurrencyPair(), EUR_GBP);
+    assertEquals(test.getLabel(), QUOTE_ID.toString());
+    assertEquals(test.getQuoteValueType(), ValueType.BLACK_VOLATILITY);
+    assertEquals(test.getSpotDateOffset(), SPOT_DATE_OFFSET);
+    assertEquals(test.getExpiryDateOffset(), DaysAdjustment.ofBusinessDays(-2, CALENDAR));
     assertEquals(test.getStrike(), STRIKE);
     assertEquals(test.getTenor(), Tenor.TENOR_3M);
   }
@@ -67,10 +112,12 @@ public class FxOptionVolatilitiesNodeTest {
     FxOptionVolatilitiesNode test = FxOptionVolatilitiesNode.of(
         EUR_GBP, SPOT_DATE_OFFSET, BDA, ValueType.BLACK_VOLATILITY, QUOTE_ID, Tenor.TENOR_3M, STRIKE);
     ZonedDateTime dateTime = LocalDate.of(2016, 1, 23).atStartOfDay(ZoneId.of("Europe/London"));
+    DaysAdjustment expAdj = DaysAdjustment.ofBusinessDays(-2, CALENDAR);
     double computed = test.timeToExpiry(dateTime, ACT_365F, REF_DATA);
     double expected = ACT_365F.relativeYearFraction(
         dateTime.toLocalDate(),
-        BDA.adjust(SPOT_DATE_OFFSET.adjust(dateTime.toLocalDate(), REF_DATA).plus(Tenor.TENOR_3M), REF_DATA));
+        expAdj.adjust(BDA.adjust(SPOT_DATE_OFFSET.adjust(dateTime.toLocalDate(), REF_DATA).plus(Tenor.TENOR_3M), REF_DATA),
+            REF_DATA));
     assertEquals(computed, expected);
   }
 
