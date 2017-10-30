@@ -68,14 +68,14 @@ public final class FxOptionVolatilitiesNode
    * The business day adjustment to apply to the delivery date.
    * <p>
    * Typically this is the same as the standard convention of the business day adjustment 
-   * applied to the end date of the underlying FX forward.
+   * applied to the delivery date of the underlying FX forward.
    */
   @PropertyDefinition(validate = "notNull")
   private final BusinessDayAdjustment businessDayAdjustment;
   /**
    * The offset of the expiry date from the delivery date.
    * <p>
-   * Typically this is the inverse of {@code spotDateOffset}. 
+   * By default the expiry date offset is the inverse of {@code spotDateOffset}. 
    * In this case {@code BusinessDayAdjustment} in {@code spotDateOffset} must be {@code NONE}.
    */
   @PropertyDefinition(validate = "notNull")
@@ -92,6 +92,9 @@ public final class FxOptionVolatilitiesNode
   private final QuoteId quoteId;
   /**
    * The tenor.
+   * <p>
+   * Typically the tenor is coherent to that of the underlying FX forward. 
+   * Thus it spans the period between spot date to delivery date.
    */
   @PropertyDefinition(validate = "notNull")
   private final Tenor tenor;
@@ -269,7 +272,7 @@ public final class FxOptionVolatilitiesNode
    * Gets the business day adjustment to apply to the delivery date.
    * <p>
    * Typically this is the same as the standard convention of the business day adjustment
-   * applied to the end date of the underlying FX forward.
+   * applied to the delivery date of the underlying FX forward.
    * @return the value of the property, not null
    */
   public BusinessDayAdjustment getBusinessDayAdjustment() {
@@ -280,7 +283,7 @@ public final class FxOptionVolatilitiesNode
   /**
    * Gets the offset of the expiry date from the delivery date.
    * <p>
-   * Typically this is the inverse of {@code spotDateOffset}.
+   * By default the expiry date offset is the inverse of {@code spotDateOffset}.
    * In this case {@code BusinessDayAdjustment} in {@code spotDateOffset} must be {@code NONE}.
    * @return the value of the property, not null
    */
@@ -309,6 +312,9 @@ public final class FxOptionVolatilitiesNode
   //-----------------------------------------------------------------------
   /**
    * Gets the tenor.
+   * <p>
+   * Typically the tenor is coherent to that of the underlying FX forward.
+   * Thus it spans the period between spot date to delivery date.
    * @return the value of the property, not null
    */
   public Tenor getTenor() {
@@ -775,7 +781,7 @@ public final class FxOptionVolatilitiesNode
      * Sets the business day adjustment to apply to the delivery date.
      * <p>
      * Typically this is the same as the standard convention of the business day adjustment
-     * applied to the end date of the underlying FX forward.
+     * applied to the delivery date of the underlying FX forward.
      * @param businessDayAdjustment  the new value, not null
      * @return this, for chaining, not null
      */
@@ -788,7 +794,7 @@ public final class FxOptionVolatilitiesNode
     /**
      * Sets the offset of the expiry date from the delivery date.
      * <p>
-     * Typically this is the inverse of {@code spotDateOffset}.
+     * By default the expiry date offset is the inverse of {@code spotDateOffset}.
      * In this case {@code BusinessDayAdjustment} in {@code spotDateOffset} must be {@code NONE}.
      * @param expiryDateOffset  the new value, not null
      * @return this, for chaining, not null
@@ -823,6 +829,9 @@ public final class FxOptionVolatilitiesNode
 
     /**
      * Sets the tenor.
+     * <p>
+     * Typically the tenor is coherent to that of the underlying FX forward.
+     * Thus it spans the period between spot date to delivery date.
      * @param tenor  the new value, not null
      * @return this, for chaining, not null
      */
