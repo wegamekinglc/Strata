@@ -31,8 +31,8 @@ public final class FxSwapConventions {
    * <p>
    * GBP/EUR convention with 2 days spot date.
    */
-  public static final FxSwapConvention GBP_EUR =
-      FxSwapConvention.of(StandardFxSwapConventions.GBP_EUR.getName());
+  public static final FxSwapConvention EUR_GBP =
+      FxSwapConvention.of(StandardFxSwapConventions.EUR_GBP.getName());
 
   /**
    * The "GBP/USD" FX Swap convention.

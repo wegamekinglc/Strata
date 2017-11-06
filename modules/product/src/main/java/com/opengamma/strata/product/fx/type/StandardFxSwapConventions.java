@@ -40,9 +40,9 @@ public final class StandardFxSwapConventions {
   /**
    * GBP/EUR convention with 2 days spot date.
    */
-  public static final FxSwapConvention GBP_EUR =
+  public static final FxSwapConvention EUR_GBP =
       ImmutableFxSwapConvention.of(
-          CurrencyPair.of(GBP, EUR),
+          CurrencyPair.of(EUR, GBP),
           DaysAdjustment.ofBusinessDays(2, GBLO_EUTA),
           BusinessDayAdjustment.of(BusinessDayConventions.MODIFIED_FOLLOWING, GBLO_EUTA));
 
